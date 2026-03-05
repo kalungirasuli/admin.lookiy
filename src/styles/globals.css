@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    --travo-orange: #FF6B00;
+    --travo-lemon: #A8E10C;
+    --travo-black: #1A1A1A;
+    --travo-white: #FFFFFF;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F8F9FA;
+    color: #1A1A1A;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9E9E9E;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-card;
+  }
+
+  .glass-card-dark {
+    @apply bg-travo-black/80 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .gradient-orange {
+    background: linear-gradient(135deg, #FF6B00 0%, #FF8C33 100%);
+  }
+
+  .gradient-lemon {
+    background: linear-gradient(135deg, #A8E10C 0%, #C2F03D 100%);
+  }
+
+  .gradient-dark {
+    background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(135deg, #FF6B00 0%, #A8E10C 100%);
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-travo-orange text-white font-semibold rounded-xl
+    hover:bg-travo-orange-dark transition-all duration-200 shadow-travo
+    hover:shadow-travo-lg active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-travo-black text-white font-semibold rounded-xl
+    hover:bg-travo-black-light transition-all duration-200
+    active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 border-2 border-travo-orange text-travo-orange font-semibold rounded-xl
+    hover:bg-travo-orange hover:text-white transition-all duration-200
+    active:scale-[0.98];
+  }
+
+  .btn-lemon {
+    @apply px-6 py-3 bg-travo-lemon text-travo-black font-semibold rounded-xl
+    hover:bg-travo-lemon-dark transition-all duration-200
+    active:scale-[0.98];
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-travo-gray-200 rounded-xl
+    focus:outline-none focus:ring-2 focus:ring-travo-orange/30 focus:border-travo-orange
+    transition-all duration-200 text-travo-black placeholder-travo-gray-400;
+  }
+
+  .stat-card {
+    @apply glass-card p-6 hover:shadow-card-hover transition-all duration-300
+    hover:translate-y-[-2px];
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-travo-gray-600
+    hover:bg-travo-orange/10 hover:text-travo-orange transition-all duration-200
+    cursor-pointer font-medium text-sm;
+  }
+
+  .sidebar-item-active {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl
+    bg-travo-orange text-white font-semibold text-sm shadow-travo;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+
+  .badge-orange {
+    @apply badge bg-travo-orange/10 text-travo-orange;
+  }
+
+  .table-row {
+    @apply border-b border-travo-gray-100 hover:bg-travo-gray-50 transition-colors;
+  }
+}
