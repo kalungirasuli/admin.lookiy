@@ -1,7 +1,25 @@
+import {
+  initCrypto,
+  isCryptoReady,
+  encrypt,
+  decrypt,
+  isEncryptedPayload,
+  getClientPublicKey,
+} from './crypto';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class ApiClient {
   private token: string | null = null;
+  private cryptoReady = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      initCrypto(API_BASE)
+        .then((ok) => { this.cryptoReady = ok; })
+        .catch(() => { this.cryptoReady = false; });
+    }
+  }
 
   setToken(token: string) {
     this.token = token;
@@ -35,7 +53,21 @@ class ApiClient {
     const token = this.getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    // Encrypt request body if crypto is active and there's a body
+    let finalBody = options.body;
+    if (this.cryptoReady && isCryptoReady() && options.body && options.method && options.method !== 'GET') {
+      try {
+        const bodyStr = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+        const encrypted = encrypt(bodyStr);
+        finalBody = JSON.stringify(encrypted);
+        headers['x-sodium'] = '1';
+        headers['x-sodium-public-key'] = getClientPublicKey();
+      } catch {
+        // Fall back to plaintext
+      }
+    }
+
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers, body: finalBody });
 
     if (res.status === 401) {
       this.clearToken();
@@ -43,8 +75,18 @@ class ApiClient {
       throw new Error('Unauthorized');
     }
 
-    const data = await res.json();
+    let data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Request failed');
+
+    // Decrypt response if encrypted
+    if (this.cryptoReady && isCryptoReady() && isEncryptedPayload(data)) {
+      try {
+        data = JSON.parse(decrypt(data));
+      } catch {
+        // If decryption fails, use raw data
+      }
+    }
+
     return data;
   }
 

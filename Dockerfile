@@ -11,6 +11,7 @@ COPY shared/index.ts ./
 COPY shared/types ./types
 COPY shared/constants ./constants
 COPY shared/utils ./utils
+COPY shared/crypto ./crypto
 RUN npm install && npm run build
 
 # --- Stage 2: Build Next.js app ---
