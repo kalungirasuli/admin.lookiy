@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Navigation,
@@ -19,6 +20,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,46 +48,60 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-xl bg-travo-black text-white shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-xl bg-travo-black text-white shadow-2xl border border-white/10"
       >
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Mobile backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-md"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 h-full z-40 flex flex-col transition-all duration-300 ease-in-out',
-          'bg-white border-r border-travo-gray-100',
-          collapsed ? 'w-20' : 'w-[280px]',
+          'fixed top-0 left-0 h-full z-40 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]',
+          'bg-travo-black text-white border-r border-white/5 shadow-[20px_0_40px_rgba(0,0,0,0.3)]',
+          collapsed ? 'w-[84px]' : 'w-[280px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-travo-gray-100">
-          <div className="w-10 h-10 rounded-xl gradient-orange flex items-center justify-center flex-shrink-0">
-            <Navigation className="text-white" size={22} />
+        {/* Logo Section */}
+        <div className="flex items-center gap-3 px-6 py-8 relative">
+          <div className="w-12 h-12 rounded-2xl bg-travo-lemon shadow-[0_0_20px_rgba(168,225,12,0.4)] flex items-center justify-center flex-shrink-0 transform transition-transform duration-500 hover:rotate-12">
+            <Zap className="text-travo-black fill-travo-black" size={26} />
           </div>
           {!collapsed && (
-            <div className="animate-fade-in">
-              <h1 className="text-xl font-bold text-travo-black tracking-tight">TRAVO</h1>
-              <p className="text-[10px] text-travo-gray-500 font-medium uppercase tracking-widest">
-                Admin Panel
-              </p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <h1 className="text-2xl font-bold tracking-tighter text-white">
+                TRAVO<span className="text-travo-lemon">.</span>
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-travo-lemon animate-pulse" />
+                <p className="text-[10px] text-travo-gray-400 font-bold uppercase tracking-[0.2em]">
+                  Pro Platform
+                </p>
+              </div>
+            </motion.div>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
+          {navigation.map((item, index) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             return (
               <Link
@@ -93,53 +109,85 @@ export default function Sidebar() {
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  isActive ? 'sidebar-item-active' : 'sidebar-item',
-                  collapsed && 'justify-center px-0',
+                  'group flex items-center gap-3 py-3.5 px-4 rounded-2xl transition-all duration-300 relative overflow-hidden',
+                  isActive
+                    ? 'bg-travo-lemon text-travo-black shadow-[0_10px_20px_rgba(168,225,12,0.2)]'
+                    : 'text-travo-gray-400 hover:bg-white/5 hover:text-white',
+                  collapsed && 'justify-center px-0 mx-auto w-12',
                 )}
               >
-                <item.icon size={20} className="flex-shrink-0" />
-                {!collapsed && <span>{item.name}</span>}
+                <item.icon
+                  size={20}
+                  className={cn(
+                    'flex-shrink-0 transition-transform duration-300 group-hover:scale-110',
+                    isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px]',
+                  )}
+                />
+                {!collapsed && (
+                  <span className={cn('text-[15px] font-semibold', isActive ? 'tracking-tight' : '')}>
+                    {item.name}
+                  </span>
+                )}
                 {!collapsed && isActive && (
-                  <ChevronRight size={16} className="ml-auto opacity-60" />
+                  <motion.div
+                    layoutId="active-pill"
+                    className="ml-auto w-1.5 h-1.5 rounded-full bg-travo-black"
+                  />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* User section */}
-        <div className="border-t border-travo-gray-100 p-4">
-          <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-            <div className="w-9 h-9 rounded-full gradient-dark flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              KA
+        {/* User / Logout Section */}
+        <div className="p-4 mt-auto">
+          <div
+            className={cn(
+              'rounded-3xl bg-white/5 border border-white/5 p-4 flex items-center gap-4',
+              collapsed && 'flex-col p-2 gap-2',
+            )}
+          >
+            <div className="relative">
+              <div className="w-10 h-10 rounded-2xl bg-travo-lemon flex items-center justify-center text-travo-black text-sm font-black shadow-[0_0_15px_rgba(168,225,12,0.2)]">
+                KA
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-travo-lemon border-2 border-travo-black flex items-center justify-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-travo-black" />
+              </div>
             </div>
+
             {!collapsed && (
-              <div className="flex-1 min-w-0 animate-fade-in">
-                <p className="text-sm font-semibold text-travo-black truncate">Kalungi Admin</p>
-                <p className="text-xs text-travo-gray-500">Super Admin</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white truncate leading-none">
+                  Kalungi Admin
+                </p>
+                <p className="text-[11px] text-travo-gray-500 font-bold mt-1 uppercase tracking-wider">
+                  Super Admin
+                </p>
               </div>
             )}
+
             {!collapsed && (
-              <button className="p-2 rounded-lg hover:bg-travo-gray-100 text-travo-gray-400 transition-colors">
-                <LogOut size={16} />
+              <button className="p-2.5 rounded-xl bg-white/5 text-travo-gray-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/10">
+                <LogOut size={18} />
               </button>
             )}
           </div>
-        </div>
 
-        {/* Collapse toggle - desktop only */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-white border border-travo-gray-200 shadow-sm items-center justify-center hover:bg-travo-gray-50 transition-colors"
-        >
-          <ChevronRight
-            size={14}
-            className={cn(
-              'text-travo-gray-500 transition-transform',
-              collapsed ? '' : 'rotate-180',
-            )}
-          />
-        </button>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="mt-4 w-full h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-travo-gray-500 hover:text-white hover:bg-white/10 transition-all group"
+          >
+            <ChevronRight
+              size={18}
+              className={cn(
+                'transition-transform duration-500',
+                collapsed ? '' : 'rotate-180',
+                'group-hover:scale-125',
+              )}
+            />
+          </button>
+        </div>
       </aside>
     </>
   );

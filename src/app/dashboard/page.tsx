@@ -1,25 +1,43 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import Header from '@/components/layout/Header';
 import {
   Navigation,
   Users,
   Car,
-  Wallet,
   TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
   MapPin,
   Clock,
   Activity,
   Megaphone,
-  ShieldCheck,
-  DollarSign,
   Eye,
   Zap,
+  Sparkles,
+  BarChart3,
+  Globe,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+
+// Variants for Framer Motion
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] } },
+};
 
 // Mock data for demo
 const stats = [
@@ -29,8 +47,8 @@ const stats = [
     change: '+12.5%',
     trend: 'up',
     icon: Navigation,
-    color: 'bg-travo-orange/10 text-travo-orange',
-    iconBg: 'gradient-orange',
+    color: 'text-travo-lemon',
+    iconBg: 'bg-travo-lemon/10',
   },
   {
     label: 'Active Users',
@@ -38,8 +56,8 @@ const stats = [
     change: '+8.2%',
     trend: 'up',
     icon: Users,
-    color: 'bg-blue-50 text-blue-600',
-    iconBg: 'bg-blue-600',
+    color: 'text-blue-400',
+    iconBg: 'bg-blue-400/10',
   },
   {
     label: 'Online Operators',
@@ -47,8 +65,8 @@ const stats = [
     change: '+3.1%',
     trend: 'up',
     icon: Car,
-    color: 'bg-green-50 text-green-600',
-    iconBg: 'bg-green-600',
+    color: 'text-travo-lemon',
+    iconBg: 'bg-travo-lemon/10',
   },
   {
     label: 'Ad Revenue',
@@ -56,8 +74,8 @@ const stats = [
     change: '+24.8%',
     trend: 'up',
     icon: Megaphone,
-    color: 'bg-purple-50 text-purple-600',
-    iconBg: 'bg-purple-600',
+    color: 'text-purple-400',
+    iconBg: 'bg-purple-400/10',
   },
 ];
 
@@ -83,23 +101,23 @@ const topOperators = [
 ];
 
 const liveMetrics = [
-  { label: 'Active Journeys', value: '342', icon: Activity, color: 'text-green-500' },
+  { label: 'Active Journeys', value: '342', icon: Activity, color: 'text-travo-lemon' },
   { label: 'Avg Wait Time', value: '2.4 min', icon: Clock, color: 'text-travo-orange' },
-  { label: 'Matching Rate', value: '94.2%', icon: Zap, color: 'text-blue-500' },
-  { label: 'Ad Impressions Today', value: '48,291', icon: Eye, color: 'text-purple-500' },
+  { label: 'Matching Rate', value: '94.2%', icon: Zap, color: 'text-blue-400' },
+  { label: 'Ad Impressions Today', value: '48,291', icon: Eye, color: 'text-purple-400' },
 ];
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    COMPLETED: 'bg-green-100 text-green-700',
-    ACTIVE: 'bg-blue-100 text-blue-700',
-    EN_ROUTE: 'bg-cyan-100 text-cyan-700',
-    SEARCHING_OPERATOR: 'bg-yellow-100 text-yellow-700',
-    CANCELLED: 'bg-red-100 text-red-700',
-    LOCKED: 'bg-indigo-100 text-indigo-700',
+    COMPLETED: 'bg-travo-lemon/10 text-travo-lemon border-travo-lemon/20',
+    ACTIVE: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
+    EN_ROUTE: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20',
+    SEARCHING_OPERATOR: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
+    CANCELLED: 'bg-red-400/10 text-red-400 border-red-400/20',
+    LOCKED: 'bg-indigo-400/10 text-indigo-400 border-indigo-400/20',
   };
   return (
-    <span className={cn('inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold', styles[status] || 'bg-gray-100 text-gray-700')}>
+    <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border', styles[status] || 'bg-white/5 text-travo-gray-400 border-white/5')}>
       {status.replace(/_/g, ' ')}
     </span>
   );
@@ -107,66 +125,96 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function DashboardPage() {
   return (
-    <div>
-      <Header title="Dashboard" subtitle="Welcome back, Kalungi. Here's your platform overview." />
+    <div className="min-h-screen bg-travo-black text-white selection:bg-travo-lemon selection:text-travo-black">
+      <Header title="Overview" subtitle="Welcome back, Kalungi. Analyzing platform performance in real-time." />
 
-      <div className="p-8 space-y-8">
-        {/* Live Metrics Bar */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="p-10 space-y-10"
+      >
+        {/* Live Metrics Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {liveMetrics.map((metric) => (
-            <div key={metric.label} className="flex items-center gap-3 glass-card px-5 py-4">
-              <div className={cn('p-2 rounded-lg bg-travo-gray-50')}>
-                <metric.icon size={18} className={metric.color} />
+            <motion.div
+              key={metric.label}
+              variants={item}
+              className="flex items-center gap-4 bg-white/5 backdrop-blur-3xl border border-white/5 rounded-3xl p-6 transition-all duration-300 hover:bg-white/10 hover:border-white/10 group"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                <metric.icon size={22} className={metric.color} />
               </div>
               <div>
-                <p className="text-xs text-travo-gray-500 font-medium">{metric.label}</p>
-                <p className="text-lg font-bold text-travo-black">{metric.value}</p>
+                <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest">{metric.label}</p>
+                <p className="text-2xl font-black text-white mt-0.5">{metric.value}</p>
               </div>
-              <div className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            </div>
+              <div className="ml-auto flex flex-col items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-travo-lemon animate-pulse shadow-[0_0_8px_rgba(168,225,12,0.8)]" />
+                <p className="text-[10px] text-travo-lemon font-black uppercase tracking-tighter">Live</p>
+              </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Primary Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
           {stats.map((stat) => (
-            <div key={stat.label} className="stat-card group">
-              <div className="flex items-center justify-between mb-4">
-                <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center text-white', stat.iconBg)}>
-                  <stat.icon size={22} />
+            <motion.div
+              key={stat.label}
+              variants={item}
+              className="relative group p-8 rounded-[40px] bg-white/5 border border-white/5 overflow-hidden transition-all duration-500 hover:bg-white/10"
+            >
+              {/* Background Accent */}
+              <div className={cn("absolute -right-10 -top-10 w-40 h-40 rounded-full blur-[80px] opacity-10 transition-opacity group-hover:opacity-20", stat.iconBg)} />
+
+              <div className="flex items-start justify-between relative z-10">
+                <div className={cn('w-16 h-16 rounded-[24px] flex items-center justify-center shadow-xl', stat.iconBg)}>
+                  <stat.icon size={28} className={stat.color} />
                 </div>
                 <div className={cn(
-                  'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg',
-                  stat.trend === 'up' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
+                  'flex items-center gap-1.5 text-[11px] font-black px-3 py-1.5 rounded-2xl border backdrop-blur-md',
+                  stat.trend === 'up' ? 'bg-travo-lemon/10 text-travo-lemon border-travo-lemon/20' : 'bg-red-400/10 text-red-400 border-red-400/20',
                 )}>
                   {stat.trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                   {stat.change}
                 </div>
               </div>
-              <p className="text-sm text-travo-gray-500 font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-travo-black mt-1">{stat.value}</p>
-            </div>
+
+              <div className="mt-8 relative z-10">
+                <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-[0.2em]">{stat.label}</p>
+                <h2 className="text-4xl font-black text-white mt-2 tracking-tighter">{stat.value}</h2>
+              </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* Revenue Chart Placeholder + Top Operators */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Revenue Chart */}
-          <div className="xl:col-span-2 glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-travo-black">Revenue Overview</h3>
-                <p className="text-sm text-travo-gray-500">Ad revenue & platform metrics</p>
+        {/* Secondary Dashboard Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+          {/* Main Chart Card */}
+          <motion.div variants={item} className="xl:col-span-2 bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10 overflow-hidden relative">
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-3xl bg-travo-lemon/10 flex items-center justify-center">
+                  <BarChart3 size={26} className="text-travo-lemon" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-white tracking-tight">Platform Performance</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Globe size={14} className="text-travo-gray-600" />
+                    <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest">Global Analytics Cluster v2.4</p>
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex bg-travo-black/40 p-1.5 rounded-2xl border border-white/5">
                 {['7D', '1M', '3M', '1Y'].map((period) => (
                   <button
                     key={period}
                     className={cn(
-                      'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                      'px-5 py-2.5 rounded-xl text-[11px] font-black transition-all duration-300 uppercase tracking-wider',
                       period === '1M'
-                        ? 'bg-travo-orange text-white'
-                        : 'bg-travo-gray-100 text-travo-gray-600 hover:bg-travo-gray-200',
+                        ? 'bg-travo-lemon text-travo-black shadow-lg'
+                        : 'text-travo-gray-500 hover:text-white',
                     )}
                   >
                     {period}
@@ -174,157 +222,211 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-            {/* Chart Area */}
-            <div className="h-[300px] flex items-end gap-2 px-4">
+
+            {/* Futuristic Chart Area */}
+            <div className="h-[340px] flex items-end gap-3 px-2">
               {[65, 45, 78, 52, 90, 68, 85, 72, 95, 60, 82, 70, 88, 55, 92, 75, 80, 62, 88, 95, 72, 85, 90, 68, 76, 82, 91, 78, 86, 94].map((value, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div
-                    className="w-full rounded-t-md gradient-orange opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
-                    style={{ height: `${value * 2.6}px` }}
-                  />
+                <div key={i} className="flex-1 group/bar relative">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${value * 2.8}px` }}
+                    transition={{ delay: 0.5 + i * 0.02, duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                    className={cn(
+                      "w-full rounded-full transition-all duration-300 relative",
+                      i === 29 ? "bg-travo-lemon shadow-[0_0_20px_rgba(168,225,12,0.6)]" : "bg-white/10 hover:bg-travo-lemon/40"
+                    )}
+                  >
+                    {i === 29 && (
+                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-travo-lemon text-travo-black text-[10px] font-black px-2 py-1 rounded-lg">
+                         NOW
+                       </div>
+                    )}
+                  </motion.div>
                 </div>
               ))}
             </div>
-            <div className="flex justify-between px-4 mt-3 text-xs text-travo-gray-400">
-              <span>1 Feb</span>
-              <span>10 Feb</span>
-              <span>20 Feb</span>
-              <span>1 Mar</span>
+            <div className="flex justify-between px-4 mt-6 text-[10px] text-travo-gray-600 font-black uppercase tracking-[0.3em]">
+              <span>February 01</span>
+              <span>March 20</span>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Top Operators */}
-          <div className="glass-card p-6">
-            <h3 className="text-lg font-bold text-travo-black mb-1">Top Operators</h3>
-            <p className="text-sm text-travo-gray-500 mb-5">This month's best performers</p>
-            <div className="space-y-4">
+          {/* Performance Rankings Card */}
+          <motion.div variants={item} className="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10 flex flex-col">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-14 h-14 rounded-3xl bg-travo-lemon/10 flex items-center justify-center">
+                <Sparkles size={26} className="text-travo-lemon" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight">Top Performers</h3>
+                <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest mt-1">Monthly Leaderboard</p>
+              </div>
+            </div>
+
+            <div className="space-y-6 flex-1">
               {topOperators.map((op, i) => (
-                <div key={op.name} className="flex items-center gap-3 p-3 rounded-xl hover:bg-travo-gray-50 transition-colors">
+                <div key={op.name} className="flex items-center gap-4 p-5 rounded-[32px] bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-300 group">
                   <div className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold',
-                    i === 0 ? 'gradient-orange' : i === 1 ? 'bg-travo-gray-700' : 'bg-travo-gray-400',
+                    'w-12 h-12 rounded-2xl flex items-center justify-center text-travo-black text-sm font-black transition-transform group-hover:scale-110 duration-500',
+                    i === 0 ? 'bg-travo-lemon shadow-[0_0_15px_rgba(168,225,12,0.4)]' : 'bg-white/10 text-white',
                   )}>
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-travo-black truncate">{op.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-travo-gray-500">
-                      <span>{op.journeys} rides</span>
-                      <span>•</span>
-                      <span>⭐ {op.rating}</span>
-                      <span>•</span>
-                      <span className="badge-orange text-[10px]">{op.vehicle}</span>
+                    <p className="text-[15px] font-black text-white truncate leading-tight">{op.name}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[10px] font-black text-travo-lemon uppercase tracking-tighter bg-travo-lemon/10 px-2 py-0.5 rounded-md">{op.vehicle}</span>
+                      <div className="w-1 h-1 rounded-full bg-white/10" />
+                      <span className="text-[11px] font-bold text-travo-gray-500 tracking-tight">⭐ {op.rating}</span>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-travo-black">{formatCurrency(op.earnings)}</p>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-white">{formatCurrency(op.earnings)}</p>
+                    <p className="text-[10px] font-bold text-travo-gray-600 uppercase mt-0.5">{op.journeys} rides</p>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+
+            <button className="mt-8 w-full py-5 rounded-[24px] bg-travo-lemon text-travo-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-xl">
+              View Detailed Rankings
+            </button>
+          </motion.div>
         </div>
 
-        {/* Recent Journeys + Pending Verifications */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Recent Journeys */}
-          <div className="xl:col-span-2 glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-travo-black">Recent Journeys</h3>
-                <p className="text-sm text-travo-gray-500">Latest platform activity</p>
-              </div>
-              <button className="btn-outline text-xs !px-4 !py-2">View All</button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-travo-gray-500 text-xs uppercase tracking-wider">
-                    <th className="pb-3 font-semibold">ID</th>
-                    <th className="pb-3 font-semibold">Client</th>
-                    <th className="pb-3 font-semibold">Operator</th>
-                    <th className="pb-3 font-semibold">Route</th>
-                    <th className="pb-3 font-semibold">Vehicle</th>
-                    <th className="pb-3 font-semibold">Price</th>
-                    <th className="pb-3 font-semibold">Status</th>
-                    <th className="pb-3 font-semibold">Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentJourneys.map((j) => (
-                    <tr key={j.id} className="table-row">
-                      <td className="py-3 font-mono text-xs font-semibold text-travo-orange">{j.id}</td>
-                      <td className="py-3 font-medium">{j.client}</td>
-                      <td className="py-3 text-travo-gray-600">{j.operator}</td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin size={12} className="text-travo-orange flex-shrink-0" />
-                          <span className="text-xs truncate max-w-[140px]">{j.route}</span>
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <span className="badge-orange">{j.vehicle}</span>
-                      </td>
-                      <td className="py-3 font-semibold">{formatCurrency(j.price)}</td>
-                      <td className="py-3"><StatusBadge status={j.status} /></td>
-                      <td className="py-3 text-xs text-travo-gray-500">{j.time}</td>
+        {/* Action Center Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+          {/* Journeys Table Section */}
+          <motion.div variants={item} className="xl:col-span-2 bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10">
+             <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-3xl bg-travo-lemon/10 flex items-center justify-center">
+                    <Navigation size={26} className="text-travo-lemon" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white tracking-tight">Live Activity</h3>
+                    <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest mt-1">Recent Journeys across Kampala</p>
+                  </div>
+                </div>
+                <button className="px-6 py-3 rounded-2xl bg-white/5 text-[11px] font-black uppercase tracking-wider text-travo-gray-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
+                  See Real-time Map
+                </button>
+             </div>
+
+             <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-travo-gray-600 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/5">
+                      <th className="pb-5 pl-4">ID</th>
+                      <th className="pb-5">Client</th>
+                      <th className="pb-5">Operator</th>
+                      <th className="pb-5">Route</th>
+                      <th className="pb-5">Price</th>
+                      <th className="pb-5">Status</th>
+                      <th className="pb-5 text-right pr-4">Time</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {recentJourneys.map((j) => (
+                      <tr key={j.id} className="group hover:bg-white/5 transition-colors duration-300">
+                        <td className="py-6 pl-4 font-black text-[11px] text-travo-lemon tracking-widest">{j.id}</td>
+                        <td className="py-6 font-bold text-[14px] text-white">{j.client}</td>
+                        <td className="py-6 text-[14px] text-travo-gray-400 font-medium">{j.operator}</td>
+                        <td className="py-6">
+                           <div className="flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 rounded-full bg-travo-lemon" />
+                             <span className="text-[12px] font-bold text-white tracking-tight">{j.route}</span>
+                           </div>
+                        </td>
+                        <td className="py-6 font-black text-[14px] text-white">{formatCurrency(j.price)}</td>
+                        <td className="py-6"><StatusBadge status={j.status} /></td>
+                        <td className="py-6 text-right pr-4 text-[11px] font-bold text-travo-gray-600 uppercase tracking-tighter">{j.time}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+             </div>
+          </motion.div>
 
-          {/* Pending Verifications */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-lg font-bold text-travo-black">Verifications</h3>
-                <p className="text-sm text-travo-gray-500">Awaiting review</p>
+          {/* Verification Actions Card */}
+          <motion.div variants={item} className="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-3xl bg-travo-lemon/10 flex items-center justify-center">
+                  <ShieldCheck size={26} className="text-travo-lemon" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white tracking-tight">Vetting</h3>
+                  <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest mt-1">Critical Review Queue</p>
+                </div>
               </div>
-              <span className="badge-warning">{pendingVerifications.length} Pending</span>
+              <div className="px-3 py-1.5 rounded-xl bg-travo-orange/10 border border-travo-orange/20 text-travo-orange text-[10px] font-black uppercase">
+                {pendingVerifications.length} Alerts
+              </div>
             </div>
-            <div className="space-y-4">
+
+            <div className="space-y-6">
               {pendingVerifications.map((v, i) => (
-                <div key={i} className="p-4 rounded-xl border border-travo-gray-200 hover:border-travo-orange/30 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-travo-black">{v.name}</p>
-                    <span className="text-xs text-travo-gray-400">{v.submitted}</span>
+                <div key={i} className="p-6 rounded-[32px] bg-travo-black/40 border border-white/5 group hover:border-travo-lemon/30 transition-all duration-300">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[15px] font-black text-white tracking-tight">{v.name}</p>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-white/5">
+                       <Clock size={10} className="text-travo-gray-500" />
+                       <span className="text-[9px] text-travo-gray-500 font-black uppercase tracking-tighter">{v.submitted}</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-travo-gray-500 mb-3">{v.type} • {v.docs}</p>
-                  <div className="flex gap-2">
-                    <button className="flex-1 py-2 text-xs font-semibold rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
-                      Approve
+                  <div className="flex items-center gap-2 mb-6">
+                     <span className="text-[10px] font-black text-travo-gray-400 uppercase tracking-widest">{v.type}</span>
+                     <div className="w-1 h-1 rounded-full bg-white/10" />
+                     <span className="text-[10px] font-black text-travo-lemon uppercase tracking-widest">{v.docs}</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <button className="flex-1 py-4 text-[11px] font-black uppercase tracking-widest rounded-2xl bg-travo-lemon text-travo-black hover:scale-[1.02] transition-transform">
+                      Verify
                     </button>
-                    <button className="flex-1 py-2 text-xs font-semibold rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
-                      Reject
+                    <button className="px-5 py-4 rounded-2xl bg-white/5 text-travo-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                      <X size={16} />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Platform Health */}
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-bold text-travo-black mb-4">Platform Health</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {/* Platform Architecture Status */}
+        <motion.div variants={item} className="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10">
+          <div className="flex items-center gap-4 mb-10">
+             <div className="w-14 h-14 rounded-3xl bg-travo-lemon/10 flex items-center justify-center">
+                <Zap size={26} className="text-travo-lemon" />
+             </div>
+             <div>
+                <h3 className="text-2xl font-black text-white tracking-tight">System Infrastructure</h3>
+                <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest mt-1">Multi-Service Micro-Latency Monitoring</p>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {[
-              { name: 'API Gateway', status: 'healthy', latency: '12ms' },
-              { name: 'Auth Service', status: 'healthy', latency: '8ms' },
-              { name: 'Journey Service', status: 'healthy', latency: '15ms' },
-              { name: 'Matching Engine', status: 'healthy', latency: '5ms' },
-              { name: 'Tracking Service', status: 'healthy', latency: '3ms' },
-              { name: 'Redis Cluster', status: 'healthy', latency: '1ms' },
+              { name: 'API Gateway', latency: '12ms' },
+              { name: 'Auth Node', latency: '8ms' },
+              { name: 'Journey Engine', latency: '15ms' },
+              { name: 'Matching Bus', latency: '5ms' },
+              { name: 'Spatial Geo', latency: '3ms' },
+              { name: 'Redis Edge', latency: '1ms' },
             ].map((service) => (
-              <div key={service.name} className="text-center p-4 rounded-xl bg-travo-gray-50">
-                <div className="w-3 h-3 rounded-full bg-green-500 mx-auto mb-2 animate-pulse" />
-                <p className="text-xs font-semibold text-travo-black">{service.name}</p>
-                <p className="text-[10px] text-travo-gray-500 mt-1">{service.latency}</p>
+              <div key={service.name} className="relative group p-6 rounded-[32px] bg-travo-black/40 border border-white/5 text-center transition-all duration-300 hover:border-travo-lemon/20">
+                <div className="w-2.5 h-2.5 rounded-full bg-travo-lemon mx-auto mb-4 animate-pulse shadow-[0_0_8px_rgba(168,225,12,0.8)]" />
+                <p className="text-[11px] font-black text-white uppercase tracking-wider">{service.name}</p>
+                <div className="mt-3 flex items-center justify-center gap-1.5">
+                   <Activity size={10} className="text-travo-gray-600" />
+                   <p className="text-[12px] font-black text-travo-lemon tracking-tighter">{service.latency}</p>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

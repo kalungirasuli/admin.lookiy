@@ -1,350 +1,228 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import Header from '@/components/layout/Header';
-import { cn, formatCurrency } from '@/lib/utils';
 import {
   Building2,
   Users,
   Car,
-  DollarSign,
-  ChevronDown,
-  ChevronUp,
-  MapPin,
-  Phone,
-  Mail,
-  Star,
-  Search,
-  Plus,
-  MoreHorizontal,
-  Bike,
-  Bus,
   TrendingUp,
+  MapPin,
   ShieldCheck,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Filter,
+  ArrowUpRight,
+  Globe,
+  Settings2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { cn, formatCurrency } from '@/lib/utils';
 
-const stats = [
-  { label: 'Total Companies', value: '24', icon: Building2, change: '+3 this month', color: 'gradient-orange' },
-  { label: 'Total Fleet Vehicles', value: '487', icon: Car, change: '+28 this month', color: 'bg-blue-600' },
-  { label: 'Active Operators', value: '392', icon: Users, change: '80.5% active', color: 'bg-green-600' },
-  { label: 'Fleet Revenue', value: formatCurrency(248000000), icon: DollarSign, change: '+18.2% vs last month', color: 'bg-purple-600' },
-];
+// Variants for Framer Motion
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] } },
+};
 
 const companies = [
   {
-    id: 'C-001',
-    name: 'SafeRide Ltd',
-    email: 'info@saferide.ug',
-    phone: '+256 414 234 567',
-    location: 'Plot 14, Kampala Road',
-    vehicleTypes: ['Car', 'Taxi'],
+    id: 'C-101',
+    name: 'Smart Fleet Kampala',
+    owner: 'James Mukasa',
     operators: 45,
     vehicles: 52,
-    rating: 4.8,
-    revenue: 68000000,
-    status: 'ACTIVE',
-    verified: true,
-    joined: 'Dec 2024',
-    operatorList: [
-      { name: 'Peter Nalwoga', vehicle: 'Car', rating: 4.8, status: 'ONLINE' },
-      { name: 'Samuel Waswa', vehicle: 'Car', rating: 4.8, status: 'ONLINE' },
-      { name: 'Diana Namutebi', vehicle: 'Taxi', rating: 4.6, status: 'BUSY' },
-    ],
+    earnings: 45000000,
+    status: 'VERIFIED',
+    location: 'Central Kampala',
+    commission: '15% / Ride',
   },
   {
-    id: 'C-002',
-    name: 'CityDrive UG',
-    email: 'hello@citydrive.co.ug',
-    phone: '+256 414 345 678',
-    location: 'Nakasero Hill, Kampala',
-    vehicleTypes: ['Car'],
-    operators: 38,
-    vehicles: 42,
-    rating: 4.7,
-    revenue: 54000000,
-    status: 'ACTIVE',
-    verified: true,
-    joined: 'Jan 2025',
-    operatorList: [
-      { name: 'Charles Kato', vehicle: 'Car', rating: 4.9, status: 'ONLINE' },
-      { name: 'Ronald Kizza', vehicle: 'Car', rating: 4.7, status: 'BUSY' },
-    ],
+    id: 'C-102',
+    name: 'Swift Boda Co.',
+    owner: 'Sarah Nalwoga',
+    operators: 120,
+    vehicles: 115,
+    earnings: 82000000,
+    status: 'VERIFIED',
+    location: 'Nakawa Division',
+    commission: '2,000 UGX / Day',
   },
   {
-    id: 'C-003',
-    name: 'Metro Taxis',
-    email: 'ops@metrotaxis.ug',
-    phone: '+256 414 456 789',
-    location: 'Ntinda Trading Center',
-    vehicleTypes: ['Taxi'],
-    operators: 22,
-    vehicles: 25,
-    rating: 4.5,
-    revenue: 32000000,
-    status: 'ACTIVE',
-    verified: true,
-    joined: 'Mar 2025',
-    operatorList: [
-      { name: 'Godfrey Mugisha', vehicle: 'Taxi', rating: 4.5, status: 'ONLINE' },
-      { name: 'Andrew Ssali', vehicle: 'Taxi', rating: 4.6, status: 'OFFLINE' },
-    ],
-  },
-  {
-    id: 'C-004',
-    name: 'BodaPro Services',
-    email: 'admin@bodapro.ug',
-    phone: '+256 414 567 890',
-    location: 'Wandegeya',
-    vehicleTypes: ['Boda'],
-    operators: 85,
-    vehicles: 90,
-    rating: 4.4,
-    revenue: 42000000,
-    status: 'ACTIVE',
-    verified: true,
-    joined: 'Feb 2025',
-    operatorList: [
-      { name: 'Francis Okello', vehicle: 'Boda', rating: 4.6, status: 'ONLINE' },
-      { name: 'Hassan Mulindwa', vehicle: 'Boda', rating: 4.3, status: 'ONLINE' },
-      { name: 'Richard Ssemakula', vehicle: 'Boda', rating: 4.5, status: 'BUSY' },
-    ],
-  },
-  {
-    id: 'C-005',
-    name: 'Entebbe Express',
-    email: 'book@entebbeexpress.ug',
-    phone: '+256 414 678 901',
-    location: 'Entebbe Road',
-    vehicleTypes: ['Car', 'Taxi'],
-    operators: 18,
-    vehicles: 22,
-    rating: 4.6,
-    revenue: 28000000,
-    status: 'ACTIVE',
-    verified: true,
-    joined: 'May 2025',
-    operatorList: [
-      { name: 'Emmanuel Buyinza', vehicle: 'Car', rating: 4.7, status: 'ONLINE' },
-      { name: 'Patrick Wakabi', vehicle: 'Taxi', rating: 4.5, status: 'OFFLINE' },
-    ],
-  },
-  {
-    id: 'C-006',
-    name: 'Pearl Transit Co.',
-    email: 'contact@pearltransit.ug',
-    phone: '+256 414 789 012',
-    location: 'Bugolobi, Kampala',
-    vehicleTypes: ['Car', 'Boda', 'Taxi'],
-    operators: 64,
-    vehicles: 71,
-    rating: 4.3,
-    revenue: 38000000,
+    id: 'C-103',
+    name: 'Elite Rides UG',
+    owner: 'Abdul Ssempijja',
+    operators: 28,
+    vehicles: 30,
+    earnings: 12500000,
     status: 'PENDING',
-    verified: false,
-    joined: 'Jan 2026',
-    operatorList: [
-      { name: 'Simon Mugabi', vehicle: 'Car', rating: 4.4, status: 'ONLINE' },
-    ],
+    location: 'Entebbe Road',
+    commission: '10% / Ride',
+  },
+  {
+    id: 'C-104',
+    name: 'Kla Logistics',
+    owner: 'Grace Namutebi',
+    operators: 15,
+    vehicles: 20,
+    earnings: 8900000,
+    status: 'VERIFIED',
+    location: 'Kiwatule',
+    commission: '500 UGX / KM',
   },
 ];
 
-function VehicleBadge({ type }: { type: string }) {
-  const icons: Record<string, React.ReactNode> = {
-    Car: <Car size={12} />,
-    Boda: <Bike size={12} />,
-    Taxi: <Bus size={12} />,
-  };
-  return (
-    <span className="badge-orange flex items-center gap-1">
-      {icons[type]}
-      {type}
-    </span>
-  );
-}
-
 export default function CompaniesPage() {
-  const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const filtered = companies.filter((c) => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return c.name.toLowerCase().includes(q) || c.location.toLowerCase().includes(q);
-    }
-    return true;
-  });
-
   return (
-    <div>
-      <Header title="Companies" subtitle="Manage fleet companies and their operators" />
+    <div className="min-h-screen bg-travo-black text-white">
+      <Header 
+        title="Tenant Management" 
+        subtitle="Orchestrating fleet companies and logistics partners on the TRAVO network." 
+      />
 
-      <div className="p-8 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {stats.map((stat) => (
-            <div key={stat.label} className="stat-card">
-              <div className="flex items-center justify-between mb-4">
-                <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center text-white', stat.color)}>
-                  <stat.icon size={22} />
-                </div>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="p-10 space-y-10"
+      >
+        {/* Top Header Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <motion.div variants={item}>
+              <h2 className="text-3xl font-black tracking-tight">Active Tenants</h2>
+              <p className="text-travo-gray-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">48 Total Partners • 12 Pending</p>
+           </motion.div>
+           <motion.div variants={item} className="flex items-center gap-4">
+              <div className="relative group">
+                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-travo-gray-600 group-focus-within:text-travo-lemon transition-colors" />
+                 <input 
+                   type="text" 
+                   placeholder="Search companies..." 
+                   className="bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm w-[300px] focus:outline-none focus:border-travo-lemon/40 transition-all placeholder:text-travo-gray-700" 
+                 />
               </div>
-              <p className="text-sm text-travo-gray-500 font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-travo-black mt-1">{stat.value}</p>
-              <p className="text-xs text-travo-gray-400 mt-1">{stat.change}</p>
-            </div>
-          ))}
+              <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-travo-lemon text-travo-black font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-transform shadow-[0_10px_20px_rgba(168,225,12,0.2)]">
+                 <Plus size={16} />
+                 <span>Register Tenant</span>
+              </button>
+           </motion.div>
         </div>
 
-        {/* Search & Actions */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-travo-gray-400" />
-            <input
-              type="text"
-              placeholder="Search companies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field !pl-10 !py-2.5 text-sm"
-            />
-          </div>
-          <button className="btn-primary flex items-center gap-2 !py-2.5 text-sm">
-            <Plus size={16} />
-            Add Company
-          </button>
-        </div>
-
-        {/* Company Cards */}
-        <div className="space-y-4">
-          {filtered.map((company) => (
-            <div key={company.id} className="glass-card overflow-hidden hover:shadow-card-hover transition-all duration-300">
-              {/* Company Header */}
-              <div className="p-6">
-                <div className="flex items-start gap-5">
-                  {/* Logo Placeholder */}
-                  <div className="w-16 h-16 rounded-2xl gradient-orange flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                    {company.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-lg font-bold text-travo-black">{company.name}</h3>
-                      {company.verified && (
-                        <ShieldCheck size={16} className="text-green-600" />
-                      )}
-                      <span className={cn(
-                        'badge',
-                        company.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700',
-                      )}>
-                        {company.status}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-travo-gray-500 mb-3">
-                      <span className="flex items-center gap-1"><MapPin size={12} />{company.location}</span>
-                      <span className="flex items-center gap-1"><Phone size={12} />{company.phone}</span>
-                      <span className="flex items-center gap-1"><Mail size={12} />{company.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {company.vehicleTypes.map((vt) => (
-                        <VehicleBadge key={vt} type={vt} />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="hidden lg:flex items-center gap-8">
-                    <div className="text-center">
-                      <p className="text-xs text-travo-gray-400">Operators</p>
-                      <p className="text-xl font-bold text-travo-black">{company.operators}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-travo-gray-400">Vehicles</p>
-                      <p className="text-xl font-bold text-travo-black">{company.vehicles}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-travo-gray-400">Rating</p>
-                      <div className="flex items-center gap-1">
-                        <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                        <p className="text-xl font-bold text-travo-black">{company.rating}</p>
+        {/* Company Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+           {companies.map((company) => (
+             <motion.div 
+               key={company.id} 
+               variants={item}
+               className="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10 group hover:bg-white/10 transition-all duration-500 relative overflow-hidden"
+             >
+                {/* Background Decor */}
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-travo-lemon/5 rounded-full blur-[80px] group-hover:bg-travo-lemon/10 transition-all" />
+                
+                <div className="flex items-start justify-between relative z-10">
+                   <div className="flex items-center gap-5">
+                      <div className="w-20 h-20 rounded-[32px] bg-travo-lemon/10 flex items-center justify-center border border-travo-lemon/20 group-hover:scale-110 transition-transform duration-500">
+                         <Building2 size={36} className="text-travo-lemon" />
                       </div>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-travo-gray-400">Revenue</p>
-                      <p className="text-lg font-bold text-travo-black">{formatCurrency(company.revenue)}</p>
-                    </div>
-                  </div>
-
-                  {/* Expand */}
-                  <button
-                    onClick={() => setExpandedCompany(expandedCompany === company.id ? null : company.id)}
-                    className="p-2 rounded-lg hover:bg-travo-gray-100 transition-colors text-travo-gray-400"
-                  >
-                    {expandedCompany === company.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </button>
+                      <div>
+                         <div className="flex items-center gap-3">
+                            <h3 className="text-2xl font-black tracking-tight">{company.name}</h3>
+                            {company.status === 'VERIFIED' ? (
+                               <div className="px-2 py-0.5 rounded-md bg-travo-lemon/10 border border-travo-lemon/20 text-travo-lemon text-[9px] font-black uppercase">Verified</div>
+                            ) : (
+                               <div className="px-2 py-0.5 rounded-md bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 text-[9px] font-black uppercase">Pending Review</div>
+                            )}
+                         </div>
+                         <div className="flex items-center gap-2 mt-1.5 text-travo-gray-500">
+                            <MapPin size={12} />
+                            <span className="text-[12px] font-bold">{company.location}</span>
+                         </div>
+                      </div>
+                   </div>
+                   <button className="p-3 rounded-2xl bg-white/5 text-travo-gray-500 hover:text-white transition-colors border border-white/5">
+                      <Settings2 size={18} />
+                   </button>
                 </div>
 
-                {/* Mobile Stats */}
-                <div className="grid grid-cols-4 gap-4 mt-4 lg:hidden">
-                  <div className="text-center p-3 rounded-xl bg-travo-gray-50">
-                    <p className="text-xs text-travo-gray-400">Operators</p>
-                    <p className="text-lg font-bold text-travo-black">{company.operators}</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-travo-gray-50">
-                    <p className="text-xs text-travo-gray-400">Vehicles</p>
-                    <p className="text-lg font-bold text-travo-black">{company.vehicles}</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-travo-gray-50">
-                    <p className="text-xs text-travo-gray-400">Rating</p>
-                    <p className="text-lg font-bold text-travo-black">{company.rating}</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-travo-gray-50">
-                    <p className="text-xs text-travo-gray-400">Revenue</p>
-                    <p className="text-sm font-bold text-travo-black">{formatCurrency(company.revenue)}</p>
-                  </div>
+                <div className="grid grid-cols-3 gap-6 mt-12 relative z-10">
+                   <div className="bg-travo-black/40 border border-white/5 rounded-3xl p-5">
+                      <p className="text-[10px] font-black text-travo-gray-600 uppercase tracking-widest">Operators</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <Users size={14} className="text-travo-lemon" />
+                         <span className="text-xl font-black">{company.operators}</span>
+                      </div>
+                   </div>
+                   <div className="bg-travo-black/40 border border-white/5 rounded-3xl p-5">
+                      <p className="text-[10px] font-black text-travo-gray-600 uppercase tracking-widest">Vehicles</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <Car size={14} className="text-travo-lemon" />
+                         <span className="text-xl font-black">{company.vehicles}</span>
+                      </div>
+                   </div>
+                   <div className="bg-travo-black/40 border border-white/5 rounded-3xl p-5">
+                      <p className="text-[10px] font-black text-travo-gray-600 uppercase tracking-widest">Earning (Mo)</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <TrendingUp size={14} className="text-travo-lemon" />
+                         <span className="text-lg font-black">{formatCurrency(company.earnings).split('.')[0]}</span>
+                      </div>
+                   </div>
                 </div>
+
+                <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-between relative z-10">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-travo-gray-600 uppercase tracking-widest">Active Model</span>
+                      <span className="text-[13px] font-black text-white mt-1">{company.commission}</span>
+                   </div>
+                   <div className="flex items-center gap-3">
+                      <button className="px-6 py-3 rounded-2xl bg-white/5 text-[11px] font-black uppercase tracking-widest text-travo-gray-400 hover:text-white transition-all border border-white/5">
+                         View Analytics
+                      </button>
+                      <button className="px-6 py-3 rounded-2xl bg-travo-lemon text-travo-black text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
+                         Manage Fleet
+                      </button>
+                   </div>
+                </div>
+             </motion.div>
+           ))}
+        </div>
+
+        {/* Global Network Stats */}
+        <motion.div variants={item} className="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[48px] p-10 relative overflow-hidden">
+           <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-4">
+                 <div className="w-14 h-14 rounded-3xl bg-travo-lemon/10 flex items-center justify-center">
+                    <Globe size={26} className="text-travo-lemon" />
+                 </div>
+                 <div>
+                    <h3 className="text-2xl font-black tracking-tight">Spatial Coverage</h3>
+                    <p className="text-[11px] text-travo-gray-500 font-bold uppercase tracking-widest mt-1">Global H3 Connectivity Map</p>
+                 </div>
               </div>
-
-              {/* Expanded Operators List */}
-              {expandedCompany === company.id && (
-                <div className="border-t border-travo-gray-100 bg-travo-gray-50/50 p-6 animate-fade-in">
-                  <h4 className="text-sm font-bold text-travo-black mb-4">Operators ({company.operatorList.length} shown)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {company.operatorList.map((op, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-travo-gray-200">
-                        <div className="relative">
-                          <div className="w-9 h-9 rounded-full gradient-orange flex items-center justify-center text-white text-xs font-bold">
-                            {op.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div className={cn(
-                            'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
-                            op.status === 'ONLINE' ? 'bg-green-500' : op.status === 'BUSY' ? 'bg-orange-500' : 'bg-travo-gray-400',
-                          )} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-travo-black truncate">{op.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-travo-gray-500">
-                            <span className="badge-orange text-[10px] !py-0">{op.vehicle}</span>
-                            <span>⭐ {op.rating}</span>
-                          </div>
-                        </div>
-                        <span className={cn(
-                          'text-xs font-semibold px-2 py-1 rounded-lg',
-                          op.status === 'ONLINE' ? 'bg-green-50 text-green-700' : op.status === 'BUSY' ? 'bg-orange-50 text-orange-700' : 'bg-gray-50 text-gray-600',
-                        )}>
-                          {op.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="mt-4 text-sm font-semibold text-travo-orange hover:underline">
-                    View all {company.operators} operators →
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+              <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/5 border border-white/5 text-[11px] font-black uppercase tracking-widest text-travo-gray-400 hover:text-white transition-all">
+                 <ArrowUpRight size={14} />
+                 <span>Expand View</span>
+              </button>
+           </div>
+           
+           <div className="mt-12 h-64 bg-travo-black/60 rounded-[32px] border border-white/5 flex items-center justify-center group cursor-crosshair">
+              <div className="text-center">
+                 <div className="w-12 h-12 rounded-full border-2 border-travo-lemon animate-ping mx-auto" />
+                 <p className="mt-4 text-[11px] font-black text-travo-gray-500 uppercase tracking-[0.3em]">Map Engine Initializing...</p>
+                 <p className="text-[10px] text-travo-lemon font-bold mt-1 uppercase">Kampala Cluster v4.2</p>
+              </div>
+           </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

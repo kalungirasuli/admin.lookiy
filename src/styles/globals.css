@@ -35,11 +35,19 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #BDBDBD;
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #9E9E9E;
+    background: rgba(168, 225, 12, 0.4);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
