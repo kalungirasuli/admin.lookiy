@@ -22,6 +22,8 @@ import {
   X,
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import IntentPulse from '@/components/dashboard/IntentPulse';
+import DensityMap from '@/components/dashboard/DensityMap';
 
 // Variants for Framer Motion
 const container = {
