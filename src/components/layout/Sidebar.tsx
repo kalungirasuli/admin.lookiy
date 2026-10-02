@@ -27,13 +27,14 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Journeys', href: '/dashboard/journeys', icon: Navigation },
-  { name: 'Users', href: '/dashboard/users', icon: Users },
-  { name: 'Operators', href: '/dashboard/operators', icon: Car },
-  { name: 'Companies', href: '/dashboard/companies', icon: Building2 },
+  { name: 'Riders', href: '/dashboard/operators', icon: Car },
+  { name: 'Clients', href: '/dashboard/users', icon: Users },
+  { name: 'Fleets', href: '/dashboard/companies', icon: Building2 },
+  { name: 'Shops & Ads', href: '/dashboard/ads', icon: Megaphone },
   { name: 'Wallet & Finance', href: '/dashboard/wallet', icon: Wallet },
-  { name: 'Advertisements', href: '/dashboard/ads', icon: Megaphone },
+  { name: 'Live tracking', href: '/dashboard/map', icon: Navigation },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Verifications', href: '/dashboard/verifications', icon: Shield },
+  { name: 'Verification', href: '/dashboard/verifications', icon: Shield },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
@@ -70,15 +71,15 @@ export default function Sidebar() {
       <aside
         className={cn(
           'fixed top-0 left-0 h-full z-40 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]',
-          'bg-travo-black text-white border-r border-white/5 shadow-[20px_0_40px_rgba(0,0,0,0.3)]',
+          'bg-travo-black text-white border-r border-white/10 shadow-[20px_0_40px_rgba(8,27,48,0.12)]',
           collapsed ? 'w-[84px]' : 'w-[280px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
         {/* Logo Section */}
         <div className="flex items-center gap-3 px-6 py-8 relative">
-          <div className="w-12 h-12 rounded-2xl bg-travo-lemon shadow-[0_0_20px_rgba(168,225,12,0.4)] flex items-center justify-center flex-shrink-0 transform transition-transform duration-500 hover:rotate-12">
-            <Zap className="text-travo-black fill-travo-black" size={26} />
+              <div className="w-12 h-12 rounded-2xl bg-travo-orange shadow-[0_0_20px_rgba(245,155,36,0.35)] flex items-center justify-center flex-shrink-0 transform transition-transform duration-500 hover:rotate-12">
+            <Zap className="text-white fill-white" size={26} />
           </div>
           {!collapsed && (
             <motion.div
@@ -86,11 +87,11 @@ export default function Sidebar() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <h1 className="text-2xl font-bold tracking-tighter text-white">
-                TRAVO<span className="text-travo-lemon">.</span>
+                 <h1 className="text-2xl font-bold tracking-tighter text-white">
+                 TRAVO<span className="text-travo-orange">.</span>
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-travo-lemon animate-pulse" />
+                 <div className="w-1.5 h-1.5 rounded-full bg-travo-orange animate-pulse" />
                 <p className="text-[10px] text-travo-gray-400 font-bold uppercase tracking-[0.2em]">
                   Pro Platform
                 </p>
@@ -111,7 +112,7 @@ export default function Sidebar() {
                 className={cn(
                   'group flex items-center gap-3 py-3.5 px-4 rounded-2xl transition-all duration-300 relative overflow-hidden',
                   isActive
-                    ? 'bg-travo-lemon text-travo-black shadow-[0_10px_20px_rgba(168,225,12,0.2)]'
+                    ? 'bg-white text-travo-black shadow-[0_10px_20px_rgba(0,0,0,0.12)]'
                     : 'text-travo-gray-400 hover:bg-white/5 hover:text-white',
                   collapsed && 'justify-center px-0 mx-auto w-12',
                 )}
@@ -148,10 +149,10 @@ export default function Sidebar() {
             )}
           >
             <div className="relative">
-              <div className="w-10 h-10 rounded-2xl bg-travo-lemon flex items-center justify-center text-travo-black text-sm font-black shadow-[0_0_15px_rgba(168,225,12,0.2)]">
+                <div className="w-10 h-10 rounded-2xl bg-travo-orange flex items-center justify-center text-white text-sm font-black shadow-[0_0_15px_rgba(245,155,36,0.2)]">
                 KA
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-travo-lemon border-2 border-travo-black flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-travo-orange border-2 border-travo-black flex items-center justify-center">
                 <div className="w-1.5 h-1.5 rounded-full bg-travo-black" />
               </div>
             </div>

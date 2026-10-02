@@ -6,9 +6,9 @@
 
 @layer base {
   :root {
-    --travo-orange: #FF6B00;
-    --travo-lemon: #A8E10C;
-    --travo-black: #1A1A1A;
+    --travo-orange: #F59B24;
+    --travo-lemon: #F59B24;
+    --travo-black: #102B48;
     --travo-white: #FFFFFF;
   }
 
@@ -20,8 +20,8 @@
 
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #F8F9FA;
-    color: #1A1A1A;
+    background-color: #F7F8F6;
+    color: #101927;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -35,11 +35,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(16, 43, 72, 0.16);
     border-radius: 10px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(168, 225, 12, 0.4);
+    background: rgba(245, 155, 36, 0.5);
   }
 
   .no-scrollbar::-webkit-scrollbar {

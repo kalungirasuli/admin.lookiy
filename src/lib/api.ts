@@ -8,6 +8,7 @@ import {
 } from './crypto';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+type QueryParams = Record<string, string | number | undefined>;
 
 class ApiClient {
   private token: string | null = null;
@@ -103,8 +104,8 @@ class ApiClient {
   }
 
   // Users
-  async getUsers(page = 1, limit = 20) {
-    return this.request<any>(`/users/profile?page=${page}&limit=${limit}`);
+  async getUsers(params: Record<string, string | number | undefined> = {}) {
+    return this.request<any>(`/users/profile?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async updateUserRoles(userId: string, roles: string[]) {
@@ -115,8 +116,8 @@ class ApiClient {
   }
 
   // Journeys
-  async getJourneys(page = 1, limit = 20) {
-    return this.request<any>(`/journeys/my/history?page=${page}&limit=${limit}`);
+  async getJourneys(params: Record<string, string | number | undefined> = {}) {
+    return this.request<any>(`/journeys/my/history?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async getJourney(id: string) {
@@ -124,8 +125,12 @@ class ApiClient {
   }
 
   // Operators
-  async getOperators(page = 1, limit = 20) {
-    return this.request<any>(`/operators?page=${page}&limit=${limit}`);
+  async getOperators(params: Record<string, string | number | undefined> = {}) {
+    return this.request<any>(`/operators?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
+  }
+
+  async getActiveOperatorLocations() {
+    return this.request<any>('/tracking/operators/active');
   }
 
   async getOperator(id: string) {
@@ -133,8 +138,8 @@ class ApiClient {
   }
 
   // Companies
-  async getCompanies(page = 1, limit = 20) {
-    return this.request<any>(`/companies?page=${page}&limit=${limit}`);
+  async getCompanies(params: Record<string, string | number | undefined> = {}) {
+    return this.request<any>(`/companies?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async getCompany(id: string) {
@@ -146,13 +151,13 @@ class ApiClient {
     return this.request<any>('/wallet/balance');
   }
 
-  async getTransactions(page = 1, limit = 20) {
-    return this.request<any>(`/wallet/transactions?page=${page}&limit=${limit}`);
+  async getTransactions(params: Record<string, string | number | undefined> = {}) {
+    return this.request<any>(`/wallet/transactions?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   // Ads
-  async getAds(page = 1, limit = 20) {
-    return this.request<any>(`/ads/campaigns?page=${page}&limit=${limit}`);
+  async getAds(params: Record<string, string | number | undefined> = {}) {
+    return this.request<any>(`/ads/campaigns?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async getAdAnalytics(id: string) {
@@ -164,12 +169,12 @@ class ApiClient {
     return this.request<any>('/analytics/dashboard');
   }
 
-  async getJourneyAnalytics(params?: string) {
-    return this.request<any>(`/analytics/journeys${params ? `?${params}` : ''}`);
+  async getJourneyAnalytics(params?: QueryParams) {
+    return this.request<any>(`/analytics/journeys${params ? `?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}` : ''}`);
   }
 
-  async getRevenue() {
-    return this.request<any>('/analytics/revenue');
+  async getRevenue(params?: QueryParams) {
+    return this.request<any>(`/analytics/revenue${params ? `?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}` : ''}`);
   }
 
   async getHeatmap() {
@@ -177,13 +182,22 @@ class ApiClient {
   }
 
   // Notifications
-  async getNotifications(page = 1) {
-    return this.request<any>(`/notifications?page=${page}`);
+  async getNotifications(params: QueryParams = {}) {
+    return this.request<any>(`/notifications?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async getUnreadCount() {
     return this.request<any>('/notifications/unread-count');
   }
+
+  async getBusinesses(params: QueryParams = {}) { return this.request<any>(`/businesses?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`); }
+  async markNotificationRead(id: string) { return this.request<any>(`/notifications/${id}/read`, { method: 'POST' }); }
+  async markAllNotificationsRead() { return this.request<any>('/notifications/read-all', { method: 'POST' }); }
+  async getVerifications(params: QueryParams = {}) { return this.request<any>(`/verification/pending?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`); }
+  async getSettings() { return this.request<any>('/settings'); }
+  async updateSettings(data: any) { return this.request<any>('/settings', { method: 'PUT', body: JSON.stringify(data) }); }
+  async updateProfile(data: any) { return this.request<any>('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }); }
+  async changePassword(currentPassword: string, newPassword: string) { return this.request<any>('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }); }
 
   // Verifications
   async getPendingVerifications() {
