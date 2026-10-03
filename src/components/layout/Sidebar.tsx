@@ -1,195 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  LayoutDashboard,
-  Navigation,
-  Users,
-  Car,
-  Building2,
-  Wallet,
-  Megaphone,
-  BarChart3,
-  Shield,
-  Bell,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  ChevronRight,
-  Zap,
-} from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { BadgeCheck, Bike, Building2, BarChart3, CircleDollarSign, LayoutDashboard, LogOut, MapPinned, Menu, Navigation2, Settings2, ShieldCheck, ShoppingBag, Users, X } from 'lucide-react';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Journeys', href: '/dashboard/journeys', icon: Navigation },
-  { name: 'Riders', href: '/dashboard/operators', icon: Car },
-  { name: 'Clients', href: '/dashboard/users', icon: Users },
-  { name: 'Fleets', href: '/dashboard/companies', icon: Building2 },
-  { name: 'Shops & Ads', href: '/dashboard/ads', icon: Megaphone },
-  { name: 'Wallet & Finance', href: '/dashboard/wallet', icon: Wallet },
-  { name: 'Live tracking', href: '/dashboard/map', icon: Navigation },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Verification', href: '/dashboard/verifications', icon: Shield },
-  { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+const items = [
+  { group: 'Overview', links: [{ label: 'Control center', href: '/dashboard', icon: LayoutDashboard }, { label: 'Live tracking', href: '/dashboard/map', icon: MapPinned }] },
+  { group: 'Operations', links: [{ label: 'Journeys', href: '/dashboard/journeys', icon: Navigation2 }, { label: 'Riders', href: '/dashboard/operators', icon: Bike }, { label: 'Clients', href: '/dashboard/users', icon: Users }, { label: 'Fleets', href: '/dashboard/companies', icon: Building2 }] },
+  { group: 'Commerce & care', links: [{ label: 'Shops & ads', href: '/dashboard/ads', icon: ShoppingBag }, { label: 'Wallet & finance', href: '/dashboard/wallet', icon: CircleDollarSign }, { label: 'Verifications', href: '/dashboard/verifications', icon: BadgeCheck }, { label: 'Staff', href: '/dashboard/staff', icon: ShieldCheck }] },
+  { group: 'Insights', links: [{ label: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 }, { label: 'Settings', href: '/dashboard/settings', icon: Settings2 }] },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  return (
-    <>
-      {/* Mobile toggle */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-xl bg-travo-black text-white shadow-2xl border border-white/10"
-      >
-        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
-      {/* Mobile backdrop */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-md"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed top-0 left-0 h-full z-40 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]',
-          'bg-travo-black text-white border-r border-white/10 shadow-[20px_0_40px_rgba(8,27,48,0.12)]',
-          collapsed ? 'w-[84px]' : 'w-[280px]',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-        )}
-      >
-        {/* Logo Section */}
-        <div className="flex items-center gap-3 px-6 py-8 relative">
-              <div className="w-12 h-12 rounded-2xl bg-travo-orange shadow-[0_0_20px_rgba(245,155,36,0.35)] flex items-center justify-center flex-shrink-0 transform transition-transform duration-500 hover:rotate-12">
-            <Zap className="text-white fill-white" size={26} />
-          </div>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-                 <h1 className="text-2xl font-bold tracking-tighter text-white">
-                 TRAVO<span className="text-travo-orange">.</span>
-              </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-travo-orange animate-pulse" />
-                <p className="text-[10px] text-travo-gray-400 font-bold uppercase tracking-[0.2em]">
-                  Pro Platform
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
-          {navigation.map((item, index) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'group flex items-center gap-3 py-3.5 px-4 rounded-2xl transition-all duration-300 relative overflow-hidden',
-                  isActive
-                    ? 'bg-white text-travo-black shadow-[0_10px_20px_rgba(0,0,0,0.12)]'
-                    : 'text-travo-gray-400 hover:bg-white/5 hover:text-white',
-                  collapsed && 'justify-center px-0 mx-auto w-12',
-                )}
-              >
-                <item.icon
-                  size={20}
-                  className={cn(
-                    'flex-shrink-0 transition-transform duration-300 group-hover:scale-110',
-                    isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px]',
-                  )}
-                />
-                {!collapsed && (
-                  <span className={cn('text-[15px] font-semibold', isActive ? 'tracking-tight' : '')}>
-                    {item.name}
-                  </span>
-                )}
-                {!collapsed && isActive && (
-                  <motion.div
-                    layoutId="active-pill"
-                    className="ml-auto w-1.5 h-1.5 rounded-full bg-travo-black"
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User / Logout Section */}
-        <div className="p-4 mt-auto">
-          <div
-            className={cn(
-              'rounded-3xl bg-white/5 border border-white/5 p-4 flex items-center gap-4',
-              collapsed && 'flex-col p-2 gap-2',
-            )}
-          >
-            <div className="relative">
-                <div className="w-10 h-10 rounded-2xl bg-travo-orange flex items-center justify-center text-white text-sm font-black shadow-[0_0_15px_rgba(245,155,36,0.2)]">
-                KA
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-travo-orange border-2 border-travo-black flex items-center justify-center">
-                <div className="w-1.5 h-1.5 rounded-full bg-travo-black" />
-              </div>
-            </div>
-
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate leading-none">
-                  Kalungi Admin
-                </p>
-                <p className="text-[11px] text-travo-gray-500 font-bold mt-1 uppercase tracking-wider">
-                  Super Admin
-                </p>
-              </div>
-            )}
-
-            {!collapsed && (
-              <button className="p-2.5 rounded-xl bg-white/5 text-travo-gray-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/10">
-                <LogOut size={18} />
-              </button>
-            )}
-          </div>
-
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="mt-4 w-full h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-travo-gray-500 hover:text-white hover:bg-white/10 transition-all group"
-          >
-            <ChevronRight
-              size={18}
-              className={cn(
-                'transition-transform duration-500',
-                collapsed ? '' : 'rotate-180',
-                'group-hover:scale-125',
-              )}
-            />
-          </button>
-        </div>
-      </aside>
-    </>
-  );
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('Staff account');
+  useEffect(() => { api.getMe().then(response => { const user = response?.data; if (user) setName([user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'Staff account'); }).catch(() => {}); }, []);
+  const logout = () => { api.clearToken(); router.replace('/login'); };
+  return <><button aria-label="Open navigation" onClick={() => setOpen(true)} className="fixed left-4 top-4 z-40 rounded-2xl border border-[#E1E5E9] bg-white p-3 text-[#102B48] shadow-sm lg:hidden"><Menu size={20} /></button>{open && <button aria-label="Close navigation" onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-[#102B48]/35 backdrop-blur-[3px] lg:hidden" />}
+    <aside className={cn('fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-white/10 bg-[#102B48] text-white transition-transform duration-300', open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')}>
+      <div className="flex h-[90px] items-center justify-between border-b border-white/10 px-6"><Link href="/dashboard" className="flex items-center gap-2 text-[29px] font-semibold tracking-[-.065em]">Look<span className="text-[#F59B24]">i</span>y</Link><button aria-label="Close navigation" onClick={() => setOpen(false)} className="lg:hidden"><X size={19} /></button></div>
+      <nav className="flex-1 overflow-y-auto px-3 py-5">{items.map(section => <div key={section.group} className="mb-6"><p className="px-4 pb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-[#8398AE]">{section.group}</p>{section.links.map(link => { const selected = pathname === link.href; const Icon = link.icon; return <Link key={link.href} title={link.label} href={link.href} onClick={() => setOpen(false)} aria-current={selected ? 'page' : undefined} className={cn('mb-1 flex h-11 items-center gap-3 rounded-[13px] px-4 text-[13px] font-medium transition-colors', selected ? 'bg-white text-[#102B48] shadow-sm' : 'text-[#B5C5D4] hover:bg-white/10 hover:text-white')}><Icon size={18} strokeWidth={selected ? 2.2 : 1.8} /><span>{link.label}</span></Link>; })}</div>)}</nav>
+      <div className="border-t border-white/10 p-3"><div className="flex items-center gap-3 rounded-2xl bg-white/[.07] p-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F59B24] text-xs font-bold text-[#102B48]">{name.split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{name}</span><span className="text-[10px] text-[#9DB1C4]">Control center</span></span><button aria-label="Sign out" title="Sign out" onClick={logout} className="rounded-lg p-2 text-[#9DB1C4] hover:bg-white/10 hover:text-white"><LogOut size={16} /></button></div></div>
+    </aside>
+  </>;
 }

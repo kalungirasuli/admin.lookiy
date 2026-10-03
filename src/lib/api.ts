@@ -6,6 +6,7 @@ import {
   isEncryptedPayload,
   getClientPublicKey,
 } from './crypto';
+import { adminPreview, previewResponse } from './admin-preview';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 type QueryParams = Record<string, string | number | undefined>;
@@ -15,7 +16,7 @@ class ApiClient {
   private cryptoReady = false;
 
   constructor() {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !adminPreview) {
       initCrypto(API_BASE)
         .then((ok) => { this.cryptoReady = ok; })
         .catch(() => { this.cryptoReady = false; });
@@ -46,13 +47,14 @@ class ApiClient {
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    if (adminPreview) return previewResponse(path, options.method || 'GET', options.body) as T;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
 
     const token = this.getToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
 
     // Encrypt request body if crypto is active and there's a body
     let finalBody = options.body;
@@ -98,6 +100,15 @@ class ApiClient {
       body: JSON.stringify({ email, password }),
     });
   }
+
+  async verifyTwoFactor(tempToken: string, code: string) {
+    return this.request<any>('/auth/2fa/verify', { method: 'POST', headers: { Authorization: `Bearer ${tempToken}` }, body: JSON.stringify({ code }) });
+  }
+
+  async adminGet<T = any>(path: string): Promise<T> { return this.request<T>(path); }
+  async adminPost<T = any>(path: string, body: unknown): Promise<T> { return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) }); }
+  async adminPut<T = any>(path: string, body: unknown): Promise<T> { return this.request<T>(path, { method: 'PUT', body: JSON.stringify(body) }); }
+  async adminDelete<T = any>(path: string): Promise<T> { return this.request<T>(path, { method: 'DELETE' }); }
 
   async getMe() {
     return this.request<any>('/auth/me');

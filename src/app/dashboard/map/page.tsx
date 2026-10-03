@@ -1,385 +1,94 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  MapPin,
-  Navigation,
-  RefreshCw,
-  Activity,
-  User,
-  Route,
-  Loader2,
-  Circle,
-  Eye,
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Activity, ArrowRight, Circle, Eye, MapPin, Navigation2, RefreshCw, Search, Signal, SignalZero } from 'lucide-react';
+import Header from '@/components/layout/Header';
 import { api } from '@/lib/api';
-import { toast } from 'sonner';
 
-interface OperatorLocation {
-  operatorId: string;
-  lat: number;
-  lng: number;
-  speed?: number;
-  heading?: number;
-  timestamp: string;
-  activeJourneyId?: string;
+interface Point { lat: number; lng: number; timestamp?: string }
+interface LiveRider extends Point { operatorId: string; activeJourneyId?: string | null; speed?: number; heading?: number; timestamp?: string }
+interface Journey { _id: string; operatorId?: string; clientId?: string; status: string; pickupLocation?: Point & { address?: string }; destination?: Point & { address?: string }; createdAt?: string; agreedPrice?: number }
+interface Route { journeyId: string; plannedRoute: Point[]; actualRoute: Point[]; coveredKm: number; remainingKm: number | null }
+const routeColor = (id: string) => { let hash = 2166136261; for (let index = 0; index < id.length; index++) hash = Math.imul(hash ^ id.charCodeAt(index), 16777619); return `hsl(${(hash >>> 0) % 360} 68% 43%)`; };
+const short = (id?: string) => id ? `#${id.slice(-6).toUpperCase()}` : '—';
+let mapsLoader: Promise<any> | null = null;
+function loadGoogleMaps(key: string) {
+  if (typeof window !== 'undefined' && (window as any).google?.maps?.Map) return Promise.resolve((window as any).google);
+  if (!mapsLoader) mapsLoader = new Promise((resolve, reject) => {
+    const callback = 'lookiyAdminMapsReady';
+    const script = document.createElement('script');
+    const timer = window.setTimeout(() => { script.remove(); mapsLoader = null; reject(new Error('Google Maps timed out.')); }, 15000);
+    (window as any)[callback] = () => { window.clearTimeout(timer); delete (window as any)[callback]; resolve((window as any).google); };
+    script.src = `https://maps.googleapis.com/maps/api/js?${new URLSearchParams({ key, v: 'weekly', libraries: 'marker', loading: 'async', callback })}`;
+    script.async = true;
+    script.onerror = () => { window.clearTimeout(timer); mapsLoader = null; reject(new Error('Google Maps could not load.')); };
+    document.head.appendChild(script);
+  });
+  return mapsLoader;
 }
-
+function distance(a: Point, b: Point) { const y = (b.lat - a.lat) * 111; const x = (b.lng - a.lng) * 111 * Math.cos(a.lat * Math.PI / 180); return x * x + y * y; }
+function remainingPath(route: Route) { const planned = route.plannedRoute || [], actual = route.actualRoute || []; if (!planned.length || !actual.length) return planned; const last = actual[actual.length - 1]; let nearest = 0; planned.forEach((point, index) => { if (distance(point, last) < distance(planned[nearest], last)) nearest = index; }); return [last, ...planned.slice(nearest + 1)]; }
+function LiveMap({ riders, journeys, routes, selected, onSelect }: { riders: LiveRider[]; journeys: Journey[]; routes: Record<string, Route>; selected: string; onSelect: (id: string) => void }) {
+  const node = useRef<HTMLDivElement>(null);
+  const map = useRef<any>(null);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
+  useEffect(() => { if (!key || !node.current) return; let active = true; loadGoogleMaps(key).then(google => { if (!active || !node.current) return; map.current = new google.maps.Map(node.current, { center: { lat: .3476, lng: 32.5825 }, zoom: 12, mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID', disableDefaultUI: true, zoomControl: true, clickableIcons: false, gestureHandling: 'greedy' }); setReady(true); }).catch(failure => { if (active) setError(failure.message); }); return () => { active = false; }; }, [key]);
+  useEffect(() => { if (!ready || !map.current) return; const google = (window as any).google; const overlays: any[] = []; const bounds = new google.maps.LatLngBounds(); const addMarker = (position: Point, color: string, title: string, id: string, glyph?: string) => { if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return; const pin = new google.maps.marker.PinElement({ background: color, borderColor: '#FFFFFF', glyphColor: '#FFFFFF', glyph: glyph || '●', scale: id === selected ? 1.35 : 1.05 }); const marker = new google.maps.marker.AdvancedMarkerElement({ map: map.current, position, title, content: pin.element || pin }); marker.addListener('click', () => onSelect(id)); overlays.push(marker); bounds.extend(position); };
+    journeys.forEach(journey => { const route = routes[journey._id]; const color = routeColor(journey._id); if (route?.actualRoute?.length > 1) { const line = new google.maps.Polyline({ map: map.current, path: route.actualRoute, strokeColor: color, strokeOpacity: selected && selected !== journey._id ? .38 : .95, strokeWeight: selected === journey._id ? 6 : 4, zIndex: selected === journey._id ? 3 : 1 }); overlays.push(line); route.actualRoute.forEach(point => bounds.extend(point)); } const remaining = route ? remainingPath(route) : []; if (remaining.length > 1) { const dots = new google.maps.Polyline({ map: map.current, path: remaining, strokeOpacity: 0, icons: [{ icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: selected && selected !== journey._id ? .4 : .9, strokeOpacity: 0, scale: selected === journey._id ? 3 : 2.5 }, offset: '0', repeat: '13px' }], zIndex: 2 }); overlays.push(dots); remaining.forEach(point => bounds.extend(point)); } if (journey.pickupLocation && !route?.actualRoute?.length) addMarker(journey.pickupLocation, color, `${short(journey._id)} pickup`, journey._id, 'P'); });
+    riders.forEach(rider => addMarker(rider, rider.activeJourneyId ? routeColor(rider.activeJourneyId) : '#40566C', `Rider ${short(rider.operatorId)}`, rider.activeJourneyId || rider.operatorId, 'R'));
+    if (!bounds.isEmpty() && !(map.current as any).__lookiyFit) { map.current.fitBounds(bounds, 65); (map.current as any).__lookiyFit = true; }
+    return () => overlays.forEach(overlay => { if ('setMap' in overlay) overlay.setMap(null); else overlay.map = null; });
+  }, [ready, riders, journeys, routes, selected, onSelect]);
+  useEffect(() => { if (!ready || !selected || !map.current) return; const journey = journeys.find(item => item._id === selected); const rider = riders.find(item => item.activeJourneyId === selected || item.operatorId === selected); const point = rider || routes[selected]?.actualRoute?.at(-1) || journey?.pickupLocation; if (point) { map.current.panTo({ lat: point.lat, lng: point.lng }); if (map.current.getZoom() < 13) map.current.setZoom(13); } }, [selected, ready, riders, journeys, routes]);
+  return <div className="relative min-h-[430px] flex-1 overflow-hidden bg-[#E9EEF1]"><div ref={node} className="absolute inset-0" />{!ready && <div className="absolute inset-0 grid place-items-center bg-[#E9EEF1]"><div className="max-w-xs rounded-2xl border border-white/80 bg-white/90 p-6 text-center shadow-sm"><MapPin size={23} className="mx-auto text-[#52738B]" /><p className="mt-3 text-sm font-semibold text-[#102B48]">{!key ? 'Google Maps key needed' : error || 'Connecting to Google Maps…'}</p><p className="mt-2 text-xs leading-5 text-[#728295]">{!key ? 'Add NEXT_PUBLIC_GOOGLE_MAPS_KEY to the admin environment to display live map tiles.' : 'Journey and rider lists remain available while the map connects.'}</p></div></div>}</div>;
+}
 export default function LiveMapPage() {
-  const [operators, setOperators] = useState<OperatorLocation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedOperator, setSelectedOperator] = useState<OperatorLocation | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchActiveOperators = useCallback(async () => {
+  const searchParams = useSearchParams();
+  const [riders, setRiders] = useState<LiveRider[]>([]);
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [routes, setRoutes] = useState<Record<string, Route>>({});
+  const [selected, setSelected] = useState(searchParams.get('journey') || '');
+  const [search, setSearch] = useState('');
+  const [onlyActive, setOnlyActive] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const refreshInProgress = useRef(false);
+  const refresh = useCallback(async () => {
+    if (refreshInProgress.current) return;
+    refreshInProgress.current = true;
+    setRefreshing(true); setError('');
     try {
-      const response = await api.getActiveOperatorLocations();
-      setOperators(response.data || []);
-      setLastUpdate(new Date());
-    } catch (err: any) {
-      console.error('Failed to fetch operators:', err);
-    } finally {
-      setLoading(false);
-    }
+      const status = 'MATCHED,EN_ROUTE,ARRIVED,LOCKED,STARTED,ACTIVE';
+      const [locationResult, firstPage] = await Promise.all([
+        api.adminGet('/tracking/admin/locations'),
+        api.adminGet(`/journeys/admin/all?status=${status}&limit=100&page=1`),
+      ]);
+      const live = Array.isArray(locationResult?.data) ? locationResult.data : [];
+      const active: Journey[] = Array.isArray(firstPage?.data) ? [...firstPage.data] : [];
+      const total = Number(firstPage?.pagination?.total ?? firstPage?.meta?.total ?? active.length);
+      for (let page = 2; page <= Math.ceil(total / 100); page += 1) {
+        const result = await api.adminGet(`/journeys/admin/all?status=${status}&limit=100&page=${page}`);
+        if (!Array.isArray(result?.data) || !result.data.length) break;
+        active.push(...result.data);
+      }
+      const chunks: Journey[][] = [];
+      for (let index = 0; index < active.length; index += 100) chunks.push(active.slice(index, index + 100));
+      const results = await Promise.allSettled(chunks.map(chunk => api.adminPost('/tracking/admin/routes', { journeyIds: chunk.map(journey => journey._id) })));
+      const next: Record<string, Route> = {};
+      results.forEach(result => { if (result.status === 'fulfilled' && Array.isArray(result.value?.data)) result.value.data.forEach((route: Route) => { next[route.journeyId] = route; }); });
+      setRiders(live); setJourneys(active); setRoutes(next); setUpdatedAt(new Date());
+      if (results.some(result => result.status === 'rejected')) setError('Some routes could not be loaded. Live rider locations and journeys are still shown.');
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not load tracking data.'); }
+    finally { refreshInProgress.current = false; setRefreshing(false); }
   }, []);
-
-  useEffect(() => {
-    fetchActiveOperators();
-  }, [fetchActiveOperators]);
-
-  useEffect(() => {
-    if (autoRefresh) {
-      intervalRef.current = setInterval(fetchActiveOperators, 5000);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [autoRefresh, fetchActiveOperators]);
-
-  const activeCount = operators.filter((o) => o.activeJourneyId).length;
-  const idleCount = operators.length - activeCount;
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Live Map Tracker</h1>
-          <p className="text-muted-foreground">
-            Real-time view of all active operators and their journeys
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={autoRefresh ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setAutoRefresh(!autoRefresh)}
-          >
-            <Activity className="mr-2 h-4 w-4" />
-            {autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={fetchActiveOperators}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Online</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{operators.length}</div>
-            <p className="text-xs text-muted-foreground">operators broadcasting location</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">On Journey</CardTitle>
-            <Route className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeCount}</div>
-            <p className="text-xs text-muted-foreground">currently on active journeys</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Idle</CardTitle>
-            <Circle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{idleCount}</div>
-            <p className="text-xs text-muted-foreground">online but no active journey</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Last Update</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {lastUpdate ? lastUpdate.toLocaleTimeString() : '--:--:--'}
-            </div>
-            <p className="text-xs text-muted-foreground">refreshes every 5s</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Map + Operator List */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Map Area */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Live Map</CardTitle>
-            <CardDescription>
-              Operator positions update in real-time. Green = on journey, Orange = idle.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="relative w-full h-[500px] bg-muted rounded-lg overflow-hidden">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : operators.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <MapPin className="h-12 w-12 mb-4" />
-                  <p className="text-lg font-medium">No active operators</p>
-                  <p className="text-sm">Operators will appear here when they go online</p>
-                </div>
-              ) : (
-                <div className="relative w-full h-full">
-                  {/* 
-                    Map visualization placeholder.
-                    In production, integrate with Google Maps / Mapbox:
-                    
-                    import { GoogleMap, Marker } from '@react-google-maps/api';
-                    
-                    Each operator gets a marker at their lat/lng position.
-                    Green markers for operators on journey, orange for idle.
-                  */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
-                    {/* Grid-based mini visualization */}
-                    <svg className="w-full h-full" viewBox="0 0 1000 500">
-                      {/* Grid lines */}
-                      {Array.from({ length: 20 }).map((_, i) => (
-                        <line
-                          key={`h${i}`}
-                          x1="0"
-                          y1={i * 25}
-                          x2="1000"
-                          y2={i * 25}
-                          stroke="currentColor"
-                          strokeOpacity="0.05"
-                        />
-                      ))}
-                      {Array.from({ length: 40 }).map((_, i) => (
-                        <line
-                          key={`v${i}`}
-                          x1={i * 25}
-                          y1="0"
-                          x2={i * 25}
-                          y2="500"
-                          stroke="currentColor"
-                          strokeOpacity="0.05"
-                        />
-                      ))}
-
-                      {/* Operator dots */}
-                      {operators.map((op, idx) => {
-                        // Normalize lat/lng to SVG coords
-                        const x = ((op.lng + 180) / 360) * 1000;
-                        const y = ((90 - op.lat) / 180) * 500;
-                        const isActive = !!op.activeJourneyId;
-                        const isSelected = selectedOperator?.operatorId === op.operatorId;
-
-                        return (
-                          <g
-                            key={op.operatorId}
-                            onClick={() => setSelectedOperator(op)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {/* Pulse effect for active */}
-                            {isActive && (
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r="12"
-                                fill={isActive ? '#22c55e' : '#f97316'}
-                                fillOpacity="0.2"
-                              >
-                                <animate
-                                  attributeName="r"
-                                  values="8;16;8"
-                                  dur="2s"
-                                  repeatCount="indefinite"
-                                />
-                                <animate
-                                  attributeName="fill-opacity"
-                                  values="0.3;0.1;0.3"
-                                  dur="2s"
-                                  repeatCount="indefinite"
-                                />
-                              </circle>
-                            )}
-                            {/* Selection ring */}
-                            {isSelected && (
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r="14"
-                                fill="none"
-                                stroke="#3b82f6"
-                                strokeWidth="2"
-                              />
-                            )}
-                            {/* Operator dot */}
-                            <circle
-                              cx={x}
-                              cy={y}
-                              r="6"
-                              fill={isActive ? '#22c55e' : '#f97316'}
-                              stroke="white"
-                              strokeWidth="2"
-                            />
-                            {/* Speed indicator */}
-                            {op.speed && op.speed > 5 && (
-                              <text
-                                x={x + 10}
-                                y={y - 5}
-                                fill="currentColor"
-                                fillOpacity="0.6"
-                                fontSize="10"
-                              >
-                                {Math.round(op.speed)} km/h
-                              </text>
-                            )}
-                          </g>
-                        );
-                      })}
-                    </svg>
-                  </div>
-                  <div className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm rounded-md px-3 py-2 text-xs flex gap-4">
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-green-500" /> On Journey
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-orange-500" /> Idle
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Operator List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Active Operators ({operators.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
-              {operators.length === 0 ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">
-                  No operators online
-                </div>
-              ) : (
-                <div className="space-y-1 p-2">
-                  {operators.map((op) => (
-                    <button
-                      key={op.operatorId}
-                      onClick={() => setSelectedOperator(op)}
-                      className={`w-full text-left px-3 py-3 rounded-md transition-colors ${
-                        selectedOperator?.operatorId === op.operatorId
-                          ? 'bg-primary/10 border border-primary/20'
-                          : 'hover:bg-muted'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full ${
-                              op.activeJourneyId ? 'bg-green-500' : 'bg-orange-500'
-                            }`}
-                          />
-                          <span className="text-sm font-medium truncate max-w-[140px]">
-                            {op.operatorId.slice(-8).toUpperCase()}
-                          </span>
-                        </div>
-                        <Badge variant={op.activeJourneyId ? 'default' : 'secondary'} className="text-[10px]">
-                          {op.activeJourneyId ? 'On Journey' : 'Idle'}
-                        </Badge>
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground flex items-center gap-3">
-                        <span>{op.lat.toFixed(4)}, {op.lng.toFixed(4)}</span>
-                        {op.speed !== undefined && <span>{Math.round(op.speed)} km/h</span>}
-                      </div>
-                      <div className="mt-0.5 text-[10px] text-muted-foreground">
-                        {new Date(op.timestamp).toLocaleTimeString()}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Selected Operator Detail */}
-      {selectedOperator && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Operator Detail — {selectedOperator.operatorId.slice(-8).toUpperCase()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-5">
-              <div>
-                <p className="text-sm text-muted-foreground">Latitude</p>
-                <p className="text-lg font-medium">{selectedOperator.lat.toFixed(6)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Longitude</p>
-                <p className="text-lg font-medium">{selectedOperator.lng.toFixed(6)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Speed</p>
-                <p className="text-lg font-medium">{selectedOperator.speed ? `${Math.round(selectedOperator.speed)} km/h` : 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Heading</p>
-                <p className="text-lg font-medium">{selectedOperator.heading ? `${Math.round(selectedOperator.heading)}°` : 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Status</p>
-                <Badge variant={selectedOperator.activeJourneyId ? 'default' : 'secondary'}>
-                  {selectedOperator.activeJourneyId ? `Journey: ${selectedOperator.activeJourneyId.slice(-6)}` : 'Idle'}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+  useEffect(() => { void refresh(); const interval = window.setInterval(() => void refresh(), 12000); return () => window.clearInterval(interval); }, [refresh]);
+  const active = useMemo(() => journeys.filter(journey => !search || [journey._id, journey.pickupLocation?.address, journey.destination?.address, journey.operatorId].some(value => String(value || '').toLowerCase().includes(search.toLowerCase()))).filter(journey => !onlyActive || ['STARTED', 'ACTIVE'].includes(journey.status)), [journeys, search, onlyActive]);
+  const selectedJourney = journeys.find(journey => journey._id === selected);
+  const selectedRider = riders.find(rider => rider.activeJourneyId === selected || rider.operatorId === selected);
+  const selectedRoute = routes[selected];
+  return <div className="min-h-screen bg-[#F5F6F7]"><Header title="Live tracking" subtitle="All active journeys and riders, on one map." /><div className="p-4 sm:p-6"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[11px] font-semibold uppercase tracking-[.17em] text-[#E0912B]">Operations map</p><h2 className="mt-1 text-[25px] font-semibold tracking-[-.05em] text-[#102B48]">A live view of Uganda</h2></div><div className="flex items-center gap-2"><span className="hidden text-xs text-[#7A8998] md:block">{updatedAt ? `Updated ${updatedAt.toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}` : 'Waiting for data'}</span><button onClick={() => void refresh()} disabled={refreshing} className="flex items-center gap-2 rounded-xl border border-[#E1E6EA] bg-white px-3 py-2.5 text-xs font-semibold text-[#334D62] disabled:opacity-50"><RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />Refresh</button></div></div>{error && <div role="alert" className="mb-4 rounded-xl border border-[#F2D7D4] bg-[#FFF4F2] p-3 text-xs text-[#A64D49]">{error}</div>}<div className="grid min-h-[630px] overflow-hidden rounded-[25px] border border-[#E4E9ED] bg-white shadow-[0_10px_40px_rgba(16,43,72,.06)] xl:grid-cols-[310px_minmax(0,1fr)_280px]"><section className="flex max-h-[650px] flex-col border-b border-[#E7EBEE] xl:border-b-0 xl:border-r"><div className="border-b border-[#EDF0F2] p-4"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-[#102B48]">Journeys in motion</p><p className="mt-1 text-[11px] text-[#8693A1]">{active.length} journeys · {riders.length} live riders</p></div><Signal size={18} className="text-[#1B9B7E]" /></div><div className="relative mt-4"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C9AAA]" /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Find journey or rider" className="w-full rounded-xl border border-[#E7EBEE] bg-[#F8FAFB] py-2.5 pl-9 pr-3 text-xs outline-none focus:border-[#8CB1C7]" /></div><label className="mt-3 flex items-center gap-2 text-xs text-[#647789]"><input type="checkbox" checked={onlyActive} onChange={event => setOnlyActive(event.target.checked)} className="accent-[#102B48]" />Only journeys underway</label></div><div className="max-h-[460px] flex-1 overflow-y-auto p-2">{active.length ? active.map(journey => { const route = routes[journey._id]; const rider = riders.find(item => item.activeJourneyId === journey._id); const color = routeColor(journey._id); return <button key={journey._id} onClick={() => setSelected(journey._id)} className={`mb-2 w-full rounded-[17px] border p-3 text-left transition ${selected === journey._id ? 'border-[#B7CAD8] bg-[#F5F9FB] shadow-sm' : 'border-transparent hover:border-[#E7EBEE] hover:bg-[#FAFBFC]'}`}><div className="flex items-center justify-between"><strong className="text-xs text-[#183650]">{short(journey._id)}</strong><span className="rounded-full bg-[#EDF2F5] px-2 py-1 text-[10px] font-semibold text-[#5E7082]">{journey.status.replace(/_/g, ' ')}</span></div><div className="mt-3 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /><span className="min-w-0 flex-1 truncate text-xs font-medium text-[#4C6174]">{journey.pickupLocation?.address || 'Pickup'} → {journey.destination?.address || 'Destination'}</span></div><div className="mt-3 flex items-center justify-between border-t border-[#EDF0F2] pt-3 text-[11px] text-[#8292A1]"><span>{rider ? 'Rider location live' : 'Awaiting rider location'}</span><span>{route ? `${route.coveredKm || 0} km covered` : 'Route pending'}</span></div></button>; }) : <p className="p-6 text-center text-xs text-[#8795A3]">No journeys currently match this view.</p>}</div></section><LiveMap riders={riders} journeys={journeys} routes={routes} selected={selected} onSelect={setSelected} /><aside className="border-t border-[#E7EBEE] p-5 xl:border-l xl:border-t-0"><p className="text-[10px] font-bold uppercase tracking-[.17em] text-[#D98829]">Selected journey</p>{selectedJourney ? <div><div className="mt-4 flex h-12 w-12 items-center justify-center rounded-2xl text-white" style={{ background: routeColor(selectedJourney._id) }}><Navigation2 size={21} /></div><h3 className="mt-4 text-xl font-semibold tracking-[-.04em] text-[#102B48]">{short(selectedJourney._id)}</h3><p className="mt-1 text-xs text-[#78899A]">{selectedJourney.status.replace(/_/g, ' ')}</p><div className="mt-6 space-y-4 border-y border-[#E8ECEF] py-5"><div><p className="text-[10px] text-[#8897A5]">Pickup</p><p className="mt-1 text-xs font-semibold text-[#31506A]">{selectedJourney.pickupLocation?.address || 'Location available on map'}</p></div><div><p className="text-[10px] text-[#8897A5]">Destination</p><p className="mt-1 text-xs font-semibold text-[#31506A]">{selectedJourney.destination?.address || 'Location available on map'}</p></div><div><p className="text-[10px] text-[#8897A5]">Rider</p><p className="mt-1 text-xs font-semibold text-[#31506A]">{selectedRider ? `Live · ${short(selectedRider.operatorId)}` : selectedJourney.operatorId ? short(selectedJourney.operatorId) : 'Not assigned'}</p></div></div><div className="mt-5 grid grid-cols-2 gap-2"><div className="rounded-xl bg-[#F2F6F8] p-3"><p className="text-[10px] text-[#8190A0]">Covered</p><p className="mt-2 text-lg font-semibold text-[#102B48]">{selectedRoute ? `${selectedRoute.coveredKm.toFixed(1)} km` : '—'}</p></div><div className="rounded-xl bg-[#F2F6F8] p-3"><p className="text-[10px] text-[#8190A0]">Remaining</p><p className="mt-2 text-lg font-semibold text-[#102B48]">{selectedRoute?.remainingKm != null ? `${selectedRoute.remainingKm.toFixed(1)} km` : '—'}</p></div></div><div className="mt-5 flex items-center gap-3 text-[11px] text-[#78899A]"><span className="h-0 w-8 border-t-[3px]" style={{ borderColor: routeColor(selectedJourney._id) }} />Covered <span className="ml-2 h-0 w-8 border-t-[3px] border-dotted" style={{ borderColor: routeColor(selectedJourney._id) }} />Remaining</div></div> : selectedRider ? <div className="mt-6"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102B48] text-white"><Circle size={19} /></div><h3 className="mt-4 text-lg font-semibold text-[#102B48]">Rider {short(selectedRider.operatorId)}</h3><p className="mt-2 text-xs text-[#78899A]">Online at {selectedRider.lat.toFixed(4)}, {selectedRider.lng.toFixed(4)}</p><p className="mt-1 text-xs text-[#78899A]">No active journey assigned.</p></div> : <div className="mt-12 text-center text-[#8190A0]"><MapPin size={24} className="mx-auto" /><p className="mt-3 text-xs">Select a journey or map marker to see its details.</p></div>}</aside></div><p className="mt-3 text-[11px] text-[#8896A4]">Solid lines show recorded movement. Dots show the remaining stored route. A route appears only when tracking data exists.</p></div></div>;
 }
