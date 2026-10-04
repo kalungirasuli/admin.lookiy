@@ -6,7 +6,6 @@ import {
   isEncryptedPayload,
   getClientPublicKey,
 } from './crypto';
-import { adminPreview, previewResponse } from './admin-preview';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 type QueryParams = Record<string, string | number | undefined>;
@@ -16,7 +15,7 @@ class ApiClient {
   private cryptoReady = false;
 
   constructor() {
-    if (typeof window !== 'undefined' && !adminPreview) {
+    if (typeof window !== 'undefined') {
       initCrypto(API_BASE)
         .then((ok) => { this.cryptoReady = ok; })
         .catch(() => { this.cryptoReady = false; });
@@ -47,7 +46,6 @@ class ApiClient {
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    if (adminPreview) return previewResponse(path, options.method || 'GET', options.body) as T;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),

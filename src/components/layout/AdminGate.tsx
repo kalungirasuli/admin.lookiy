@@ -3,14 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { adminPreview } from '@/lib/admin-preview';
 
 export default function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<'checking' | 'allowed' | 'denied'>('checking');
   useEffect(() => {
-    // Local UI preview only; production still requires a token and an admin/staff role.
-    if (adminPreview) { setState('allowed'); return; }
     if (!api.getToken()) { router.replace('/login'); setState('denied'); return; }
     let live = true;
     api.getMe().then(response => {
