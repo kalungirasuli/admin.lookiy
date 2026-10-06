@@ -7,13 +7,13 @@
 FROM node:20-alpine AS shared-build
 WORKDIR /build/shared
 COPY shared/package.json shared/tsconfig.json ./
-COPY shared/index.ts ./
+COPY shared/*.ts shared/*.json ./
 COPY shared/types ./types
 COPY shared/constants ./constants
 COPY shared/utils ./utils
 COPY shared/crypto ./crypto
 COPY .npmrc ./
-RUN npm install && npm run build
+RUN --mount=type=cache,id=npm,target=/root/.npm npm install && npm run build
 
 # --- Stage 2: Build Next.js app ---
 FROM node:20-alpine AS app-build
@@ -21,7 +21,7 @@ WORKDIR /build/app
 COPY apps/web-admin/package.json ./
 COPY --from=shared-build /build/shared /build/shared
 COPY .npmrc ./
-RUN npm install && npm install /build/shared
+RUN --mount=type=cache,id=npm,target=/root/.npm npm install && npm install /build/shared
 COPY apps/web-admin/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
