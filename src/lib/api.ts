@@ -114,19 +114,19 @@ class ApiClient {
 
   // Users
   async getUsers(params: Record<string, string | number | undefined> = {}) {
-    return this.request<any>(`/users/profile?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
+    return this.request<any>(`/auth/admin/users?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async updateUserRoles(userId: string, roles: string[]) {
-    return this.request<any>('/users/roles', {
+    return this.request<any>(`/auth/admin/users/${encodeURIComponent(userId)}/roles`, {
       method: 'PUT',
-      body: JSON.stringify({ userId, roles }),
+      body: JSON.stringify({ roles }),
     });
   }
 
   // Journeys
   async getJourneys(params: Record<string, string | number | undefined> = {}) {
-    return this.request<any>(`/journeys/my/history?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
+    return this.request<any>(`/journeys/admin/all?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async getJourney(id: string) {
@@ -139,7 +139,7 @@ class ApiClient {
   }
 
   async getActiveOperatorLocations() {
-    return this.request<any>('/tracking/operators/active');
+    return this.request<any>('/tracking/admin/locations');
   }
 
   async getOperator(id: string) {
@@ -157,16 +157,25 @@ class ApiClient {
 
   // Wallet
   async getWalletBalance() {
-    return this.request<any>('/wallet/balance');
+    return this.request<any>('/wallet/admin/system');
   }
 
   async getTransactions(params: Record<string, string | number | undefined> = {}) {
-    return this.request<any>(`/wallet/transactions?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
+    return this.request<any>(`/wallet/admin/transactions?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
+  }
+
+  // System wallet (platform revenue)
+  async getSystemWallet() {
+    return this.request<any>('/wallet/admin/system');
+  }
+
+  async adminSystemWithdraw(body: { amount: number; paymentMethodId: string; twoFactorCode: string }) {
+    return this.request<any>('/payments/admin/system-withdraw', { method: 'POST', body: JSON.stringify(body) });
   }
 
   // Ads
   async getAds(params: Record<string, string | number | undefined> = {}) {
-    return this.request<any>(`/ads/campaigns?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
+    return this.request<any>(`/ads/admin/ads?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`);
   }
 
   async getAdAnalytics(id: string) {
@@ -199,24 +208,24 @@ class ApiClient {
     return this.request<any>('/notifications/unread-count');
   }
 
-  async getBusinesses(params: QueryParams = {}) { return this.request<any>(`/businesses?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`); }
-  async markNotificationRead(id: string) { return this.request<any>(`/notifications/${id}/read`, { method: 'POST' }); }
-  async markAllNotificationsRead() { return this.request<any>('/notifications/read-all', { method: 'POST' }); }
-  async getVerifications(params: QueryParams = {}) { return this.request<any>(`/verification/pending?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`); }
-  async getSettings() { return this.request<any>('/settings'); }
-  async updateSettings(data: any) { return this.request<any>('/settings', { method: 'PUT', body: JSON.stringify(data) }); }
-  async updateProfile(data: any) { return this.request<any>('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }); }
+  async getBusinesses(params: QueryParams = {}) { return this.request<any>(`/ads/admin/businesses?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`); }
+  async markNotificationRead(id: string) { return this.request<any>(`/notifications/${id}/read`, { method: 'PATCH' }); }
+  async markAllNotificationsRead() { return this.request<any>('/notifications/read-all', { method: 'PATCH' }); }
+  async getVerifications(params: QueryParams = {}) { return this.request<any>(`/verification/admin/all?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]))}`); }
+  async getSettings() { return this.request<any>('/users/settings'); }
+  async updateSettings(data: any) { return this.request<any>('/users/settings', { method: 'PUT', body: JSON.stringify(data) }); }
+  async updateProfile(data: any) { return this.request<any>('/users/profile', { method: 'PUT', body: JSON.stringify(data) }); }
   async changePassword(currentPassword: string, newPassword: string) { return this.request<any>('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }); }
 
   // Verifications
   async getPendingVerifications() {
-    return this.request<any>('/verification/pending');
+    return this.request<any>('/verification/admin/all?status=PENDING');
   }
 
   async processVerification(id: string, action: 'approve' | 'reject', reason?: string) {
     return this.request<any>(`/verification/${id}/manual-review`, {
       method: 'POST',
-      body: JSON.stringify({ action, reason }),
+      body: JSON.stringify({ decision: action === 'approve' ? 'VERIFIED' : 'REJECTED', rejectionReason: reason }),
     });
   }
 }
