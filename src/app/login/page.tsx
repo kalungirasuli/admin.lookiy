@@ -2,8 +2,11 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api';
+
+const inputClass = 'mt-2 block h-[50px] w-full rounded-xl border border-[#D9D5CF] bg-white px-4 text-base text-[#181B26] outline-none placeholder:text-[#767783] focus:border-[#7752A7] focus:ring-2 focus:ring-[#7752A7]/25 sm:text-sm';
+const focusClass = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#7752A7]';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,22 +17,138 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  async function submit(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError('');
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+
+    setBusy(true);
+    setError('');
     try {
-      const response = tempToken ? await api.verifyTwoFactor(tempToken, code) : await api.login(email.trim(), password);
+      const response = tempToken
+        ? await api.verifyTwoFactor(tempToken, code)
+        : await api.login(email.trim(), password);
       const result = response?.data || response;
-      if (result?.requiresTwoFactor && result?.tempToken) { setTempToken(result.tempToken); return; }
+
+      if (result?.requiresTwoFactor && result?.tempToken) {
+        setTempToken(result.tempToken);
+        setPassword('');
+        setShowPassword(false);
+        return;
+      }
+
       const roles = (result?.user?.roles || []).map((role: string) => String(role).toUpperCase());
-      if (!roles.includes('ADMIN') && !roles.includes('STAFF')) throw new Error('This account cannot access the control center.');
+      if (!roles.includes('ADMIN') && !roles.includes('STAFF')) {
+        throw new Error('This account cannot access the control center.');
+      }
       if (!result?.accessToken) throw new Error('Sign in did not return an access token.');
+
       api.setToken(result.accessToken);
       router.replace('/dashboard');
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Sign in failed.'); }
-    finally { setBusy(false); }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Sign in failed.');
+    } finally {
+      setBusy(false);
+    }
   }
-  return <main className="min-h-screen bg-[#F5F6F7] p-3 md:p-5 lg:p-7"><div className="mx-auto grid min-h-[calc(100vh-24px)] max-w-[1440px] overflow-hidden rounded-[32px] border border-[#E3E7EB] bg-white shadow-[0_18px_80px_rgba(16,43,72,.08)] lg:grid-cols-[.92fr_1fr]">
-    <section className="relative hidden flex-col justify-between overflow-hidden bg-[#102B48] p-12 text-white lg:flex"><div className="absolute -right-40 top-1/4 h-[440px] w-[440px] rounded-full border border-white/10" /><div className="absolute -right-20 top-[20%] h-[440px] w-[440px] rounded-full border border-white/10" /><div className="relative text-[31px] font-semibold tracking-[-.065em]">Look<span className="text-[#F59B24]">i</span>y<span className="ml-3 align-middle text-[10px] font-bold uppercase tracking-[.25em] text-white/45">Control</span></div><div className="relative max-w-lg"><span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-xs"><ShieldCheck size={15} /> Private operations workspace</span><h1 className="mt-8 text-5xl font-semibold leading-[1.08] tracking-[-.055em]">One clear view of every journey.</h1><p className="mt-5 max-w-md text-sm leading-7 text-[#B9C8D7]">Track live rides, care for riders and clients, review fleets and shops, and follow every settlement from one place.</p></div><p className="relative text-xs text-white/45">Lookiy · Uganda</p></section>
-    <section className="flex items-center justify-center p-7 sm:p-12 lg:p-20"><div className="w-full max-w-[420px]"><div className="mb-12 text-3xl font-semibold tracking-[-.065em] text-[#102B48] lg:hidden">Look<span className="text-[#F59B24]">i</span>y</div><div className="mb-9 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDF2F6] text-[#102B48]"><LockKeyhole size={22} /></div><p className="text-xs font-semibold uppercase tracking-[.19em] text-[#E39024]">Admin access</p><h2 className="mt-2 text-[34px] font-semibold tracking-[-.05em] text-[#102B48]">{tempToken ? 'Check your code' : 'Welcome back'}</h2><p className="mt-2 text-sm leading-6 text-[#6A7685]">{tempToken ? 'Enter the code from your authenticator to continue.' : 'Sign in with your Lookiy staff account.'}</p><form onSubmit={submit} className="mt-9 space-y-5">{tempToken ? <label className="block text-xs font-semibold text-[#465264]">Authentication code<input autoFocus inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} required className="mt-2 h-13 w-full rounded-2xl border border-[#E1E6EB] bg-[#F9FAFB] px-4 py-3 text-base tracking-[.25em] outline-none focus:border-[#8DAFC8]" /></label> : <><label className="block text-xs font-semibold text-[#465264]">Email address<input type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@lookiy.com" className="mt-2 w-full rounded-2xl border border-[#E1E6EB] bg-[#F9FAFB] px-4 py-3 text-sm outline-none focus:border-[#8DAFC8]" /></label><label className="block text-xs font-semibold text-[#465264]">Password<div className="relative mt-2"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required className="w-full rounded-2xl border border-[#E1E6EB] bg-[#F9FAFB] px-4 py-3 pr-12 text-sm outline-none focus:border-[#8DAFC8]" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-[#758295]">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label></>}{error && <p role="alert" className="rounded-xl bg-[#FFF1EF] px-4 py-3 text-xs text-[#B64043]">{error}</p>}<button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#102B48] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#183E62] disabled:opacity-50">{busy ? 'Checking…' : tempToken ? 'Verify code' : 'Sign in'}<ArrowRight size={17} /></button></form>{tempToken && <button onClick={() => { setTempToken(''); setCode(''); setError(''); }} className="mt-5 text-xs font-semibold text-[#6A7685]">Use a different account</button>}<p className="mt-12 text-xs text-[#9AA4AE]">Access is limited to authorized Lookiy administrators and staff.</p></div></section>
-  </div></main>;
+
+  function switchAccount() {
+    setTempToken('');
+    setCode('');
+    setError('');
+  }
+
+  return (
+    <main className="min-h-[100svh] bg-[#F7F5F1] text-[#181B26]">
+      <div className="mx-auto grid min-h-[100svh] max-w-[1520px] px-5 py-5 sm:px-9 sm:py-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:grid-rows-[auto_1fr_auto] lg:gap-x-12 lg:px-8 lg:py-8 xl:gap-x-20">
+        <header className="mx-auto flex w-full max-w-[500px] items-center gap-4 pb-5 lg:col-start-1 lg:row-start-1 lg:pb-0">
+          <span className="text-[31px] font-semibold leading-none tracking-[-.07em]">
+            Look<span className="text-[#A85110]">i</span>y
+          </span>
+          <span className="border-l border-[#D9D5CF] pl-4 text-[10px] font-semibold uppercase tracking-[.18em] text-[#555866]">
+            Control Center
+          </span>
+        </header>
+
+        <div className="relative isolate mx-auto h-28 w-full max-w-[500px] overflow-hidden rounded-[20px] bg-[#24243B] sm:h-36 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:h-auto lg:min-h-[620px] lg:max-w-none lg:rounded-[28px]">
+          <picture aria-hidden="true" className="absolute inset-0">
+            <source media="(min-width: 1024px)" srcSet="/images/admin-login/signin.jpg" />
+            <img src="/images/admin-login/discovery.jpg" alt="" decoding="async" className="h-full w-full object-cover object-[center_83%] lg:object-[center_65%]" />
+          </picture>
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#161427] via-transparent to-transparent lg:from-[#161427] lg:via-[#161427]/10 lg:to-transparent" />
+          <div className="relative flex h-full flex-col justify-end p-4 text-white lg:p-9 xl:p-12">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.22em] text-[#FFE0BD]">
+              <span className="h-px w-5 bg-[#FFB875]" aria-hidden="true" />
+              Lookiy operations
+            </div>
+            <p className="mt-4 hidden max-w-[11ch] text-[clamp(2.5rem,4.5vw,4.25rem)] font-semibold leading-[.98] tracking-[-.055em] lg:block">
+              A clear view of every journey.
+            </p>
+            <p className="mt-4 hidden max-w-[35ch] text-sm leading-6 text-white/90 lg:block">
+              Follow live rides and manage riders, fleets, and shops from one workspace.
+            </p>
+          </div>
+        </div>
+
+        <section aria-labelledby="login-title" className="mx-auto flex w-full max-w-[500px] items-center py-8 sm:py-10 lg:col-start-1 lg:row-start-2">
+          <div className="mx-auto w-full max-w-[390px]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#E8D8CA] bg-[#FFF1E3] px-3 py-1.5 text-xs font-semibold text-[#7E461C]">
+              <LockKeyhole size={13} aria-hidden="true" />
+              {tempToken ? 'Two-step verification' : 'Staff access'}
+            </div>
+            <h1 id="login-title" className="text-[clamp(2.25rem,4vw,3.5rem)] font-semibold leading-[1.02] tracking-[-.055em]">
+              {tempToken ? 'Check your code' : 'Welcome back.'}
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#555866]">
+              {tempToken ? 'Enter the code from your authenticator app.' : 'Sign in with your Lookiy staff account.'}
+            </p>
+
+            <form onSubmit={submit} aria-busy={busy} className="mt-7 space-y-4">
+              {tempToken ? (
+                <div>
+                  <label htmlFor="login-code" className="text-sm font-medium">Authentication code</label>
+                  <input id="login-code" name="code" autoFocus inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} required className={inputClass + ' tracking-[.2em]'} />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="login-email" className="text-sm font-medium">Email address</label>
+                    <input id="login-email" name="email" type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@example.com" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="login-password" className="text-sm font-medium">Password</label>
+                    <div className="relative">
+                      <input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required className={inputClass + ' pr-14'} />
+                      <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-controls="login-password" onClick={() => setShowPassword(!showPassword)} className={'absolute inset-y-1 right-1 grid w-11 place-items-center rounded-lg text-[#555866] hover:bg-[#F1ECF5] ' + focusClass}>
+                        {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {error && <p role="alert" className="break-words rounded-xl border border-[#F0CFCB] bg-[#FFF1EF] px-4 py-3 text-sm text-[#922F37]">{error}</p>}
+
+              <button type="submit" disabled={busy} className={'flex h-[52px] w-full items-center justify-center gap-2.5 rounded-xl bg-[#242039] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#382E51] disabled:cursor-wait disabled:opacity-70 ' + focusClass}>
+                {busy ? 'Checking…' : tempToken ? 'Verify code' : 'Sign in'}
+                {busy ? <Loader2 size={17} aria-hidden="true" className="motion-safe:animate-spin" /> : <ArrowRight size={17} aria-hidden="true" />}
+              </button>
+            </form>
+
+            {tempToken && (
+              <button type="button" disabled={busy} onClick={switchAccount} className={'mt-5 inline-flex min-h-10 items-center gap-2 rounded text-sm font-medium text-[#534173] hover:underline disabled:opacity-70 ' + focusClass}>
+                <ArrowLeft size={15} aria-hidden="true" />
+                Use a different account
+              </button>
+            )}
+          </div>
+        </section>
+
+        <footer className="mx-auto flex w-full max-w-[500px] items-center gap-2 border-t border-[#E3DED6] pt-4 text-xs leading-5 text-[#555866] lg:col-start-1 lg:row-start-3">
+          <ShieldCheck size={15} className="shrink-0" aria-hidden="true" />
+          For authorized Lookiy administrators and staff.
+        </footer>
+      </div>
+    </main>
+  );
 }

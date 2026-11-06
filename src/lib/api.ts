@@ -70,7 +70,7 @@ class ApiClient {
 
     const res = await fetch(`${API_BASE}${path}`, { ...options, headers, body: finalBody });
 
-    if (res.status === 401) {
+    if (res.status === 401 && path !== '/auth/login' && path !== '/auth/2fa/verify') {
       this.clearToken();
       if (typeof window !== 'undefined') window.location.href = '/login';
       throw new Error('Unauthorized');
