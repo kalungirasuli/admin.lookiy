@@ -103,7 +103,7 @@ class ApiClient {
     return this.request<any>('/auth/2fa/verify', { method: 'POST', headers: { Authorization: `Bearer ${tempToken}` }, body: JSON.stringify({ code }) });
   }
 
-  async adminGet<T = any>(path: string): Promise<T> { return this.request<T>(path); }
+  async adminGet<T = any>(path: string, options: RequestInit = {}): Promise<T> { return this.request<T>(path, options); }
   async adminPost<T = any>(path: string, body: unknown): Promise<T> { return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) }); }
   async adminPut<T = any>(path: string, body: unknown): Promise<T> { return this.request<T>(path, { method: 'PUT', body: JSON.stringify(body) }); }
   async adminDelete<T = any>(path: string): Promise<T> { return this.request<T>(path, { method: 'DELETE' }); }

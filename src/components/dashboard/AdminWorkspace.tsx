@@ -79,6 +79,7 @@ function rowMetric(kind: Kind, item: Item) {
   return '';
 }
 function status(kind: Kind, item: Item) {
+  if (kind === 'journeys' && item.emergency) return 'INTERRUPTED';
   if (kind === 'riders') return item.identityVerificationStatus === 'REJECTED' ? 'Verification failed' : item.isVerified ? 'Verified' : item.status || 'Unverified';
   if (kind === 'clients' || kind === 'staff') return item.isActive === false ? 'Inactive' : item.isVerified ? 'Verified' : 'Active';
   if (kind === 'wallet') return item.walletType || item.status || item.type;

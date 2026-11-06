@@ -35,7 +35,7 @@ function LiveMap({ riders, journeys, routes, selected, onSelect }: { riders: Liv
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
-  useEffect(() => { if (!key || !node.current) return; let active = true; loadGoogleMaps(key).then(google => { if (!active || !node.current) return; map.current = new google.maps.Map(node.current, { center: { lat: .3476, lng: 32.5825 }, zoom: 12, mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID', disableDefaultUI: true, zoomControl: true, clickableIcons: false, gestureHandling: 'greedy' }); setReady(true); }).catch(failure => { if (active) setError(failure.message); }); return () => { active = false; }; }, [key]);
+  useEffect(() => { if (!key || !node.current) return; let active = true; loadGoogleMaps(key).then(google => { if (!active || !node.current) return; map.current = new google.maps.Map(node.current, { center: { lat: .3476, lng: 32.5825 }, zoom: 12, mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID', disableDefaultUI: true, zoomControl: true, clickableIcons: true, mapTypeId: google.maps.MapTypeId.ROADMAP, colorScheme: google.maps.ColorScheme.LIGHT, gestureHandling: 'greedy' }); setReady(true); }).catch(failure => { if (active) setError(failure.message); }); return () => { active = false; }; }, [key]);
   useEffect(() => { if (!ready || !map.current) return; const google = (window as any).google; const overlays: any[] = []; const bounds = new google.maps.LatLngBounds(); const addMarker = (position: Point, color: string, title: string, id: string, glyph?: string) => { if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return; const pin = new google.maps.marker.PinElement({ background: color, borderColor: '#FFFFFF', glyphColor: '#FFFFFF', glyph: glyph || '●', scale: id === selected ? 1.35 : 1.05 }); const marker = new google.maps.marker.AdvancedMarkerElement({ map: map.current, position, title, content: pin.element || pin }); marker.addListener('click', () => onSelect(id)); overlays.push(marker); bounds.extend(position); };
     journeys.forEach(journey => { const route = routes[journey._id]; const color = routeColor(journey._id); if (route?.actualRoute?.length > 1) { const line = new google.maps.Polyline({ map: map.current, path: route.actualRoute, strokeColor: color, strokeOpacity: selected && selected !== journey._id ? .38 : .95, strokeWeight: selected === journey._id ? 6 : 4, zIndex: selected === journey._id ? 3 : 1 }); overlays.push(line); route.actualRoute.forEach(point => bounds.extend(point)); } const remaining = route ? remainingPath(route) : []; if (remaining.length > 1) { const dots = new google.maps.Polyline({ map: map.current, path: remaining, strokeOpacity: 0, icons: [{ icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: selected && selected !== journey._id ? .4 : .9, strokeOpacity: 0, scale: selected === journey._id ? 3 : 2.5 }, offset: '0', repeat: '13px' }], zIndex: 2 }); overlays.push(dots); remaining.forEach(point => bounds.extend(point)); } if (journey.pickupLocation && !route?.actualRoute?.length) addMarker(journey.pickupLocation, color, `${short(journey._id)} pickup`, journey._id, 'P'); });
     riders.forEach(rider => addMarker(rider, rider.activeJourneyId ? routeColor(rider.activeJourneyId) : '#40566C', `Rider ${short(rider.operatorId)}`, rider.activeJourneyId || rider.operatorId, 'R'));
@@ -47,6 +47,7 @@ function LiveMap({ riders, journeys, routes, selected, onSelect }: { riders: Liv
 }
 export default function LiveMapPage() {
   const searchParams = useSearchParams();
+  const requestedJourney = searchParams.get('journey') || '';
   const [riders, setRiders] = useState<LiveRider[]>([]);
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [routes, setRoutes] = useState<Record<string, Route>>({});
@@ -75,6 +76,10 @@ export default function LiveMapPage() {
         if (!Array.isArray(result?.data) || !result.data.length) break;
         active.push(...result.data);
       }
+      if (requestedJourney && !active.some(j => j._id === requestedJourney)) {
+        const incident = await api.adminGet(`/journeys/admin/emergencies/${encodeURIComponent(requestedJourney)}`);
+        if (incident.data) active.push(incident.data);
+      }
       const chunks: Journey[][] = [];
       for (let index = 0; index < active.length; index += 100) chunks.push(active.slice(index, index + 100));
       const results = await Promise.allSettled(chunks.map(chunk => api.adminPost('/tracking/admin/routes', { journeyIds: chunk.map(journey => journey._id) })));
@@ -84,7 +89,7 @@ export default function LiveMapPage() {
       if (results.some(result => result.status === 'rejected')) setError('Some routes could not be loaded. Live rider locations and journeys are still shown.');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not load tracking data.'); }
     finally { refreshInProgress.current = false; setRefreshing(false); }
-  }, []);
+  }, [requestedJourney]);
   useEffect(() => { void refresh(); const interval = window.setInterval(() => void refresh(), 12000); return () => window.clearInterval(interval); }, [refresh]);
   const active = useMemo(() => journeys.filter(journey => !search || [journey._id, journey.pickupLocation?.address, journey.destination?.address, journey.operatorId].some(value => String(value || '').toLowerCase().includes(search.toLowerCase()))).filter(journey => !onlyActive || ['STARTED', 'ACTIVE'].includes(journey.status)), [journeys, search, onlyActive]);
   const selectedJourney = journeys.find(journey => journey._id === selected);

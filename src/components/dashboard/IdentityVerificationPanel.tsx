@@ -64,7 +64,7 @@ export default function IdentityVerificationPanel({ userId, initial, onChanged }
     {!records.length && <p className="text-xs text-[#8492A0]">No identity documents submitted yet.</p>}
     {canSubmit && <details className="rounded-xl border border-[#E2E8ED] bg-white p-3"><summary className="cursor-pointer text-xs font-semibold text-[#193852]">Submit new documents as admin</summary><div className="mt-4 grid grid-cols-2 gap-2">
       <input aria-label="NIN" placeholder="NIN · 14 characters" value={nin} maxLength={14} onChange={e => setNin(e.target.value.toUpperCase())} className="rounded-lg border p-2 text-xs" />
-      <input aria-label="Card number" placeholder="Card number · 9 digits" value={cardNumber} inputMode="numeric" maxLength={9} onChange={e => setCardNumber(e.target.value)} className="rounded-lg border p-2 text-xs" />
+      <input aria-label="Card number" placeholder="Card number · letters and numbers" value={cardNumber} onChange={e => setCardNumber(e.target.value)} className="rounded-lg border p-2 text-xs" />
       <input aria-label="Given names" placeholder="Given names" value={givenNames} onChange={e => setGivenNames(e.target.value)} className="rounded-lg border p-2 text-xs" />
       <input aria-label="Surname" placeholder="Surname" value={surname} onChange={e => setSurname(e.target.value)} className="rounded-lg border p-2 text-xs" />
       <label className="col-span-2 text-[11px] text-[#718092]">Date of birth<input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className="mt-1 w-full rounded-lg border p-2 text-xs" /></label>

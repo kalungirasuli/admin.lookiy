@@ -4,7 +4,7 @@
 # ============================================
 
 # --- Stage 1: Build shared package ---
-FROM node:20-alpine AS shared-build
+FROM node:26.13.0-alpine AS shared-build
 WORKDIR /build/shared
 COPY shared/package.json shared/tsconfig.json ./
 COPY shared/*.ts shared/*.json ./
@@ -16,7 +16,7 @@ COPY .npmrc ./
 RUN --mount=type=cache,id=npm,target=/root/.npm npm install && npm run build
 
 # --- Stage 2: Build Next.js app ---
-FROM node:20-alpine AS app-build
+FROM node:26.13.0-alpine AS app-build
 WORKDIR /build/app
 COPY apps/web-admin/package.json ./
 COPY --from=shared-build /build/shared /build/shared
@@ -27,7 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # --- Stage 3: Production ---
-FROM node:20-alpine AS production
+FROM node:26.13.0-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
