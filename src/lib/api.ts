@@ -9,6 +9,7 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 type QueryParams = Record<string, string | number | undefined>;
+export type MapsConfig = { key: string | null; mapId: string };
 
 class ApiClient {
   private token: string | null = null;
@@ -55,17 +56,22 @@ class ApiClient {
     return signature;
   }
 
+  private sessionHeaders(authorization?: string): Record<string, string> {
+    if (!authorization) {
+      const token = this.getToken();
+      if (!token) return {};
+      authorization = `Bearer ${token}`;
+    }
+    return { Authorization: authorization, 'x-device-signature': this.deviceSignature() };
+  }
+
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const suppliedHeaders = options.headers as Record<string, string> | undefined;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
+      ...suppliedHeaders,
+      ...this.sessionHeaders(suppliedHeaders?.Authorization),
     };
-
-    const token = this.getToken();
-    if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
-    if (headers.Authorization && path.startsWith('/auth/')) {
-      headers['x-device-signature'] = this.deviceSignature();
-    }
 
     // Encrypt request body if crypto is active and there's a body
     let finalBody = options.body;
@@ -129,6 +135,12 @@ class ApiClient {
 
   async getMe() {
     return this.request<any>('/auth/me');
+  }
+
+  async getMapsConfig(signal: AbortSignal): Promise<MapsConfig> {
+    const response = await fetch('/api/maps/config', { headers: this.sessionHeaders(), signal });
+    if (!response.ok) throw new Error('Could not check the map setup.');
+    return response.json();
   }
 
   // Users

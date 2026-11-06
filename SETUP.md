@@ -14,7 +14,9 @@ Set `NEXT_PUBLIC_API_URL` to the API gateway. The service must have access to au
 
 ## Google Maps
 
-Set `NEXT_PUBLIC_GOOGLE_MAPS_KEY` to a browser key authorized for the Maps JavaScript API and the admin site origin. Set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` to a Google Maps map ID for advanced markers. The live tracking page shows a setup state when the key is absent. Current rider positions come from tracking's short-lived live location store. Journey routes use recorded GPS points for the solid covered line and planned route points for the dotted remaining line. A journey without a recorded or planned route is shown without inventing a path.
+Set `GOOGLE_MAPS_KEY` to a dedicated browser key restricted to the dashboard website and Maps JavaScript API. The dashboard server reads it at runtime and returns it only after verifying a current staff session. The staff browser uses the key to load Google Maps. Set `GOOGLE_MAPS_MAP_ID` to a JavaScript map ID for advanced markers. The legacy `NEXT_PUBLIC_GOOGLE_MAPS_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` names are also supported.
+
+The live tracking page shows a setup state when the key is absent. Current rider positions come from tracking's short-lived live location store. Journey routes use recorded GPS points for the solid covered line and planned route points for the dotted remaining line. A journey without a recorded or planned route is shown without inventing a path.
 
 ## Sections
 

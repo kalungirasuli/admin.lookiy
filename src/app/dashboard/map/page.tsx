@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Activity, ArrowRight, Circle, Eye, MapPin, Navigation2, RefreshCw, Search, Signal, SignalZero } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { api } from '@/lib/api';
+import { useMapsConfig } from '@/lib/use-maps-config';
 
 interface Point { lat: number; lng: number; timestamp?: string }
 interface LiveRider extends Point { operatorId: string; activeJourneyId?: string | null; speed?: number; heading?: number; timestamp?: string }
@@ -34,8 +35,40 @@ function LiveMap({ riders, journeys, routes, selected, onSelect }: { riders: Liv
   const map = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
-  useEffect(() => { if (!key || !node.current) return; let active = true; loadGoogleMaps(key).then(google => { if (!active || !node.current) return; map.current = new google.maps.Map(node.current, { center: { lat: .3476, lng: 32.5825 }, zoom: 12, mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID', disableDefaultUI: true, zoomControl: true, clickableIcons: true, mapTypeId: google.maps.MapTypeId.ROADMAP, colorScheme: google.maps.ColorScheme.LIGHT, gestureHandling: 'greedy' }); setReady(true); }).catch(failure => { if (active) setError(failure.message); }); return () => { active = false; }; }, [key]);
+  const { config, error: configError } = useMapsConfig();
+  const key = config?.key;
+  const mapId = config?.mapId;
+  useEffect(() => {
+    if (!key || !node.current) return;
+    let active = true;
+    let authFailed = false;
+    const browser = window as Window & { gm_authFailure?: () => void };
+    const previousAuthFailure = browser.gm_authFailure;
+    const authFailure = () => {
+      authFailed = true;
+      if (active) {
+        setReady(false);
+        setError('Google Maps could not authorize this dashboard.');
+      }
+    };
+    browser.gm_authFailure = authFailure;
+
+    loadGoogleMaps(key).then(google => {
+      if (!active || authFailed || !node.current) return;
+      map.current = new google.maps.Map(node.current, {
+        center: { lat: .3476, lng: 32.5825 }, zoom: 12, mapId,
+        disableDefaultUI: true, zoomControl: true, clickableIcons: true,
+        mapTypeId: google.maps.MapTypeId.ROADMAP, colorScheme: google.maps.ColorScheme.LIGHT,
+        gestureHandling: 'greedy',
+      });
+      setReady(!authFailed);
+    }).catch(failure => { if (active && !authFailed) setError(failure.message); });
+
+    return () => {
+      active = false;
+      if (browser.gm_authFailure === authFailure) browser.gm_authFailure = previousAuthFailure;
+    };
+  }, [key, mapId]);
   useEffect(() => { if (!ready || !map.current) return; const google = (window as any).google; const overlays: any[] = []; const bounds = new google.maps.LatLngBounds(); const addMarker = (position: Point, color: string, title: string, id: string, glyph?: string) => { if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return; const pin = new google.maps.marker.PinElement({ background: color, borderColor: '#FFFFFF', glyphColor: '#FFFFFF', glyph: glyph || '●', scale: id === selected ? 1.35 : 1.05 }); const marker = new google.maps.marker.AdvancedMarkerElement({ map: map.current, position, title, content: pin.element || pin }); marker.addListener('click', () => onSelect(id)); overlays.push(marker); bounds.extend(position); };
     journeys.forEach(journey => { const route = routes[journey._id]; const color = routeColor(journey._id); if (route?.actualRoute?.length > 1) { const line = new google.maps.Polyline({ map: map.current, path: route.actualRoute, strokeColor: color, strokeOpacity: selected && selected !== journey._id ? .38 : .95, strokeWeight: selected === journey._id ? 6 : 4, zIndex: selected === journey._id ? 3 : 1 }); overlays.push(line); route.actualRoute.forEach(point => bounds.extend(point)); } const remaining = route ? remainingPath(route) : []; if (remaining.length > 1) { const dots = new google.maps.Polyline({ map: map.current, path: remaining, strokeOpacity: 0, icons: [{ icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: selected && selected !== journey._id ? .4 : .9, strokeOpacity: 0, scale: selected === journey._id ? 3 : 2.5 }, offset: '0', repeat: '13px' }], zIndex: 2 }); overlays.push(dots); remaining.forEach(point => bounds.extend(point)); } if (journey.pickupLocation && !route?.actualRoute?.length) addMarker(journey.pickupLocation, color, `${short(journey._id)} pickup`, journey._id, 'P'); });
     riders.forEach(rider => addMarker(rider, rider.activeJourneyId ? routeColor(rider.activeJourneyId) : '#40566C', `Rider ${short(rider.operatorId)}`, rider.activeJourneyId || rider.operatorId, 'R'));
@@ -43,7 +76,8 @@ function LiveMap({ riders, journeys, routes, selected, onSelect }: { riders: Liv
     return () => overlays.forEach(overlay => { if ('setMap' in overlay) overlay.setMap(null); else overlay.map = null; });
   }, [ready, riders, journeys, routes, selected, onSelect]);
   useEffect(() => { if (!ready || !selected || !map.current) return; const journey = journeys.find(item => item._id === selected); const rider = riders.find(item => item.activeJourneyId === selected || item.operatorId === selected); const point = rider || routes[selected]?.actualRoute?.at(-1) || journey?.pickupLocation; if (point) { map.current.panTo({ lat: point.lat, lng: point.lng }); if (map.current.getZoom() < 13) map.current.setZoom(13); } }, [selected, ready, riders, journeys, routes]);
-  return <div className="relative min-h-[430px] flex-1 overflow-hidden bg-[#E9EEF1]"><div ref={node} className="absolute inset-0" />{!ready && <div className="absolute inset-0 grid place-items-center bg-[#E9EEF1]"><div className="max-w-xs rounded-2xl border border-white/80 bg-white/90 p-6 text-center shadow-sm"><MapPin size={23} className="mx-auto text-[#52738B]" /><p className="mt-3 text-sm font-semibold text-[#102B48]">{!key ? 'Google Maps key needed' : error || 'Connecting to Google Maps…'}</p><p className="mt-2 text-xs leading-5 text-[#728295]">{!key ? 'Add NEXT_PUBLIC_GOOGLE_MAPS_KEY to the admin environment to display live map tiles.' : 'Journey and rider lists remain available while the map connects.'}</p></div></div>}</div>;
+  const needsSetup = config && !key;
+  return <div className="relative min-h-[430px] flex-1 overflow-hidden bg-[#E9EEF1]"><div ref={node} className="absolute inset-0" />{!ready && <div className="absolute inset-0 grid place-items-center bg-[#E9EEF1]"><div className="max-w-xs rounded-2xl border border-white/80 bg-white/90 p-6 text-center shadow-sm"><MapPin size={23} className="mx-auto text-[#52738B]" /><p className="mt-3 text-sm font-semibold text-[#102B48]">{configError || error || (needsSetup ? 'Google Maps needs setup' : 'Connecting to Google Maps…')}</p><p className="mt-2 text-xs leading-5 text-[#728295]">{needsSetup ? 'Set the dashboard’s browser-restricted Google Maps key to display the map.' : 'Journey and rider lists remain available while the map is unavailable.'}</p></div></div>}</div>;
 }
 export default function LiveMapPage() {
   const searchParams = useSearchParams();
