@@ -45,6 +45,16 @@ class ApiClient {
     }
   }
 
+  private deviceSignature(): string {
+    const key = 'lookiy-admin-device';
+    const saved = localStorage.getItem(key);
+    if (saved) return saved;
+
+    const signature = crypto.randomUUID();
+    localStorage.setItem(key, signature);
+    return signature;
+  }
+
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -53,6 +63,9 @@ class ApiClient {
 
     const token = this.getToken();
     if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+    if (headers.Authorization && path.startsWith('/auth/')) {
+      headers['x-device-signature'] = this.deviceSignature();
+    }
 
     // Encrypt request body if crypto is active and there's a body
     let finalBody = options.body;
@@ -95,12 +108,18 @@ class ApiClient {
   async login(email: string, password: string) {
     return this.request<any>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email, password, deviceSignature: this.deviceSignature(), deviceName: 'Lookiy Admin', platform: 'web',
+      }),
     });
   }
 
   async verifyTwoFactor(tempToken: string, code: string) {
-    return this.request<any>('/auth/2fa/verify', { method: 'POST', headers: { Authorization: `Bearer ${tempToken}` }, body: JSON.stringify({ code }) });
+    return this.request<any>('/auth/2fa/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tempToken}` },
+      body: JSON.stringify({ code, deviceSignature: this.deviceSignature() }),
+    });
   }
 
   async adminGet<T = any>(path: string, options: RequestInit = {}): Promise<T> { return this.request<T>(path, options); }
