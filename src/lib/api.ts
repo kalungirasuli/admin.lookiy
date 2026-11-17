@@ -115,7 +115,7 @@ class ApiClient {
     return this.request<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email, password, deviceSignature: this.deviceSignature(), deviceName: 'Lookiy Admin', platform: 'web',
+        ...(email.includes('@') ? { email } : { phone: email }), password, deviceSignature: this.deviceSignature(), deviceName: 'Lookiy Admin', platform: 'web',
       }),
     });
   }

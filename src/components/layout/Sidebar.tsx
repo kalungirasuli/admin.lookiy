@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const items = [
   { group: 'Safety', links: [{ label: 'Emergency board', href: '/dashboard/emergencies', icon: ShieldCheck }] },
   { group: 'Overview', links: [{ label: 'Control center', href: '/dashboard', icon: LayoutDashboard }, { label: 'Live tracking', href: '/dashboard/map', icon: MapPinned }] },
-  { group: 'Operations', links: [{ label: 'Journeys', href: '/dashboard/journeys', icon: Navigation2 }, { label: 'Riders', href: '/dashboard/operators', icon: Bike }, { label: 'Clients', href: '/dashboard/users', icon: Users }, { label: 'Fleets', href: '/dashboard/companies', icon: Building2 }] },
+  { group: 'Operations', links: [{ label: 'Journeys', href: '/dashboard/journeys', icon: Navigation2 }, { label: 'Riders', href: '/dashboard/operators', icon: Bike }, { label: 'Users', href: '/dashboard/users', icon: Users }, { label: 'Fleets', href: '/dashboard/companies', icon: Building2 }] },
   { group: 'Commerce & care', links: [{ label: 'Shops & ads', href: '/dashboard/ads', icon: ShoppingBag }, { label: 'Wallet & finance', href: '/dashboard/wallet', icon: CircleDollarSign }, { label: 'Vehicle catalog', href: '/dashboard/vehicle-catalog', icon: Bike }, { label: 'Vehicle fares', href: '/dashboard/vehicle-fares', icon: CircleDollarSign }, { label: 'Verifications', href: '/dashboard/verifications', icon: BadgeCheck }, { label: 'Staff', href: '/dashboard/staff', icon: ShieldCheck }] },
   { group: 'Insights', links: [{ label: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 }, { label: 'Settings', href: '/dashboard/settings', icon: Settings2 }] },
 ];

@@ -112,8 +112,8 @@ export default function LoginPage() {
               ) : (
                 <>
                   <div>
-                    <label htmlFor="login-email" className="text-sm font-medium">Email address</label>
-                    <input id="login-email" name="email" type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@example.com" className={inputClass} />
+                    <label htmlFor="login-email" className="text-sm font-medium">Email or phone number</label>
+                    <input id="login-email" name="username" type="text" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@example.com or +256…" className={inputClass} />
                   </div>
                   <div>
                     <label htmlFor="login-password" className="text-sm font-medium">Password</label>
