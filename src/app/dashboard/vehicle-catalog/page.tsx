@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Car, Check, Download, Plus, RefreshCw, Search, Star, Upload } from 'lucide-react';
+import { Car, Check, Download, Plus, RefreshCw, Search, Star, Trash2, Upload } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { api } from '@/lib/api';
 
@@ -9,6 +9,7 @@ type Entry = { _id: string; kind: string; code: string; label: string; parentId?
 type Spec = { _id: string; catalogSpecificationId: string; typeId: string; variantId?: string; brandId: string; modelId: string; capacityId: string; yearId: string; premium?: boolean; active: boolean; availableInCatalog: boolean; revision: number; vehicleType: string; vehicleVariant: string; vehicleBrand: string; vehicleModel: string; vehicleYear: number; vehicleCapacity: number; typeLabel: string; variantLabel: string };
 type Application = { _id: string; specificationId?: string; userId: string; status: string; revision: number; vehicleType: string; vehicleVariant: string; vehicleBrand: string; vehicleModel: string; vehicleYear: number; vehicleCapacity: number; reviewReason?: string; createdAt: string };
 type Selection = { typeId: string; variantId: string; brandId: string; modelId: string; capacityId: string; yearId: string; premium: boolean };
+type DeleteTarget = { resource: 'entries' | 'specifications'; id: string; revision: number; name: string };
 const EMPTY: Selection = { typeId: '', variantId: '', brandId: '', modelId: '', capacityId: '', yearId: '', premium: false };
 const KINDS = [['BRAND', 'Brands'], ['MODEL', 'Models'], ['RELEASE_YEAR', 'Release years'], ['CAPACITY', 'Seats / capacity'], ['TYPE', 'Vehicle types'], ['TRUCK_CATEGORY', 'Truck categories'], ['BODA_TYPE', 'Boda power types']];
 const names: Record<string, string> = { BRAND: 'Brand name', MODEL: 'Model name', TYPE: 'Vehicle type name', TRUCK_CATEGORY: 'Truck category name', BODA_TYPE: 'Boda power type' };
@@ -24,6 +25,7 @@ export default function VehicleCatalogPage() {
   const [label, setLabel] = useState(''), [parent, setParent] = useState(''), [vehicleGroup, setVehicleGroup] = useState('CAR'), [value, setValue] = useState(''), [date, setDate] = useState('');
   const [editing, setEditing] = useState<Entry | null>(null), [active, setActive] = useState(true);
   const [selection, setSelection] = useState<Selection>(EMPTY), [reviewing, setReviewing] = useState<Application | null>(null), [reason, setReason] = useState('');
+  const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
   const [file, setFile] = useState<{ name: string; base64: string } | null>(null), [preview, setPreview] = useState<{ rows: Record<string, string | number>[]; errors: { row: number; message: string }[]; imported: number } | null>(null);
   const generation = useRef(0), lock = useRef(false), fileReadGeneration = useRef(0);
   const load = useCallback(async () => {
@@ -40,6 +42,16 @@ export default function VehicleCatalogPage() {
     if (lock.current) return; lock.current = true; setBusy(true); setError(''); setMessage('');
     try { await work(); setMessage(success); await load(); } catch (e) { setError(e instanceof Error ? e.message : 'Could not save changes'); }
     finally { lock.current = false; setBusy(false); }
+  }
+  async function confirmDelete() {
+    if (!deleting) return;
+    const target = deleting;
+    await action(async () => {
+      await api.adminDelete(`/operators/catalog/admin/${target.resource}/${target.id}?revision=${target.revision}`);
+      setDeleting(null);
+      if (editing?._id === target.id) clearEntry();
+      setSelection(EMPTY);
+    }, 'Vehicle catalog updated. Deleted vehicles are removed from new registration and booking choices.');
   }
   const byKind = (k: string) => entries.filter(e => e.kind === k && e.active);
   const parentKind = ['TYPE', 'MODEL'].includes(kind) ? 'BRAND' : kind === 'RELEASE_YEAR' ? 'MODEL' : kind === 'CAPACITY' ? 'RELEASE_YEAR' : ['TRUCK_CATEGORY', 'BODA_TYPE'].includes(kind) ? 'TYPE' : '';
@@ -141,11 +153,93 @@ export default function VehicleCatalogPage() {
         <div className="flex items-end gap-2"><button type="submit" className={primary}><Plus size={16} />{editing ? 'Save changes' : 'Create entry'}</button>{editing && <button type="button" className={button} onClick={() => clearEntry()}>Cancel edit</button>}</div>
         </>}
       </fieldset></form>
-    </Section><Section title={KINDS.find(([k]) => k === kind)?.[1] || ''}><SearchField value={search} onChange={setSearch} /><div className="mt-4 divide-y">{entries.filter(e => e.kind === kind && entryLabel(e).toLowerCase().includes(search.toLowerCase())).map(e => <div key={e._id} className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-medium">{entryLabel(e)}</p><p className="text-xs text-slate-500">{e.code} · {e.active ? 'Active' : 'Paused'}{e.releaseDate ? ' · ' + e.releaseDate : ''}</p></div><button disabled={busy} className={button} onClick={() => { setEditing(e); setLabel(e.label); setParent(e.parentId || ''); setVehicleGroup(e.vehicleType || 'CAR'); setValue(e.value == null ? '' : String(e.value)); setDate(e.releaseDate || ''); setActive(e.active); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Edit</button></div>)}</div>{!entries.some(e => e.kind === kind) && <p className="mt-5 text-sm text-slate-500">No entries yet. Create one above or import an Excel workbook.</p>}</Section></>}
-    {tab === 'Specifications' && <><Section title="Publish a vehicle specification" description="Choose each field from master data. Add missing entries in Master data first. Set Premium cars’ prices and pickup-distance policies separately in Vehicle fares."><form onSubmit={publish}><fieldset disabled={busy || loading} className="space-y-5">{chooser}<button className={primary} disabled={!selectionValid}><Plus size={16} />Publish listing</button></fieldset></form></Section><Section title="Published specifications"><SearchField value={search} onChange={setSearch} /><div className="mt-4 divide-y">{specs.filter(s => `${describe(s)} ${s.typeLabel} ${s.variantLabel}`.toLowerCase().includes(search.toLowerCase())).map(s => <div key={s._id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="flex items-center gap-2 text-sm font-semibold"><Car size={17} />{describe(s)}{s.premium && <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800">Premium</span>}</p><p className="mt-1 text-xs text-slate-500">{s.typeLabel} · {s.variantLabel} · {s.availableInCatalog ? 'Published' : 'Paused or parent inactive'}</p></div><div className="flex gap-2"><button className={button} disabled={busy} onClick={() => void action(async () => { await api.adminPut(`/operators/catalog/admin/specifications/${s._id}`, { active: s.active, premium: !s.premium, revision: s.revision }); }, 'Premium label updated.')}>{s.premium ? 'Remove premium' : 'Mark premium'}</button><button className={button} disabled={busy} onClick={() => void action(async () => { await api.adminPut(`/operators/catalog/admin/specifications/${s._id}`, { active: !s.active, revision: s.revision }); }, 'Listing availability updated.')}>{s.active ? 'Pause' : 'Activate'}</button></div></div>)}</div>{!specs.length && <p className="mt-5 text-sm text-slate-500">No published vehicles yet. Create master data, then publish your first specification.</p>}</Section></>}
+    </Section>
+    <Section title={KINDS.find(([k]) => k === kind)?.[1] || ''}>
+      <SearchField value={search} onChange={setSearch} />
+      <div className="mt-4 divide-y">
+        {entries.filter(entry => entry.kind === kind && entryLabel(entry).toLowerCase().includes(search.toLowerCase())).map(entry =>
+          <div key={entry._id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div>
+              <p className="text-sm font-medium">{entryLabel(entry)}</p>
+              <p className="text-xs text-slate-500">{entry.code} · {entry.active ? 'Active' : 'Paused'}{entry.releaseDate ? ' · ' + entry.releaseDate : ''}</p>
+            </div>
+            <div className="flex gap-2">
+              <button disabled={busy || loading} className={button} onClick={() => {
+                setEditing(entry); setLabel(entry.label); setParent(entry.parentId || ''); setVehicleGroup(entry.vehicleType || 'CAR');
+                setValue(entry.value == null ? '' : String(entry.value)); setDate(entry.releaseDate || ''); setActive(entry.active);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}>Edit</button>
+              <button disabled={busy || loading} className={button + ' border-red-200 text-red-700'} aria-label={`Delete ${entryLabel(entry)}`}
+                onClick={() => setDeleting({ resource: 'entries', id: entry._id, revision: entry.revision, name: entryLabel(entry) })}>
+                <Trash2 size={16} />Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      {!entries.some(entry => entry.kind === kind) && <p className="mt-5 text-sm text-slate-500">No entries yet. Create one above or import an Excel workbook.</p>}
+    </Section></>}
+    {tab === 'Specifications' && <>
+      <Section title="Publish a vehicle specification" description="Choose each field from master data. Add missing entries in Master data first. Set Premium cars’ prices and pickup-distance policies separately in Vehicle fares.">
+        <form onSubmit={publish}><fieldset disabled={busy || loading} className="space-y-5">{chooser}<button className={primary} disabled={!selectionValid}><Plus size={16} />Publish listing</button></fieldset></form>
+      </Section>
+      <Section title="Published specifications">
+        <SearchField value={search} onChange={setSearch} />
+        <div className="mt-4 divide-y">
+          {specs.filter(spec => `${describe(spec)} ${spec.typeLabel} ${spec.variantLabel}`.toLowerCase().includes(search.toLowerCase())).map(spec =>
+            <div key={spec._id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-semibold"><Car size={17} />{describe(spec)}{spec.premium && <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800">Premium</span>}</p>
+                <p className="mt-1 text-xs text-slate-500">{spec.typeLabel} · {spec.variantLabel} · {spec.availableInCatalog ? 'Published' : 'Paused or parent inactive'}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className={button} disabled={busy || loading} onClick={() => void action(async () => {
+                  await api.adminPut(`/operators/catalog/admin/specifications/${spec._id}`, { active: spec.active, premium: !spec.premium, revision: spec.revision });
+                }, 'Premium label updated.')}>{spec.premium ? 'Remove premium' : 'Mark premium'}</button>
+                <button className={button} disabled={busy || loading} onClick={() => void action(async () => {
+                  await api.adminPut(`/operators/catalog/admin/specifications/${spec._id}`, { active: !spec.active, revision: spec.revision });
+                }, 'Listing availability updated.')}>{spec.active ? 'Pause' : 'Activate'}</button>
+                <button className={button + ' border-red-200 text-red-700'} disabled={busy || loading} aria-label={`Delete ${describe(spec)}`}
+                  onClick={() => setDeleting({ resource: 'specifications', id: spec._id, revision: spec.revision, name: describe(spec) })}>
+                  <Trash2 size={16} />Delete
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        {!specs.length && <p className="mt-5 text-sm text-slate-500">No published vehicles yet. Create master data, then publish your first specification.</p>}
+      </Section>
+    </>}
     {tab === 'Applications' && <><Section title="Rider listing applications" description="Pending riders can save registration but cannot go online until approval. Select the corrected specification below; the approved catalog details replace their proposed details."><div className="flex gap-3"><label className="text-sm">Status<select className={field} value={status} onChange={e => { setStatus(e.target.value); setPage(1); setReviewing(null); }}>{['PENDING', 'APPROVING', 'APPROVED', 'REJECTED', 'ALL'].map(s => <option key={s}>{s}</option>)}</select></label></div><div className="mt-4 divide-y">{applications.map(a => <div key={a._id} className="flex flex-wrap justify-between gap-3 py-4"><div><p className="text-sm font-semibold">{describe(a)}</p><p className="mt-1 text-xs text-slate-500">{a.vehicleType} · {a.vehicleVariant} · {a.status} · {new Date(a.createdAt).toLocaleDateString()}</p><p className="mt-1 text-xs text-slate-500">{a.reviewReason || 'Awaiting catalog review'}</p></div>{['PENDING', 'APPROVING'].includes(a.status) && <button className={button} disabled={busy} onClick={() => startReview(a)}>Review listing</button>}</div>)}</div>{!applications.length && <p className="mt-5 text-sm text-slate-500">No applications in this view.</p>}<div className="mt-5 flex items-center gap-3"><button className={button} disabled={page === 1 || loading} onClick={() => setPage(p => p - 1)}>Previous</button><span className="text-sm">Page {page}</span><button className={button} disabled={applications.length < 100 || loading} onClick={() => setPage(p => p + 1)}>Next</button></div></Section>
       {reviewing && <Section title="Review and correct vehicle details" description={`Rider proposed: ${describe(reviewing)} · ${reviewing.vehicleType} / ${reviewing.vehicleVariant}. Create missing master entries first, then return here to select the corrected details.`}><button className={button + ' mb-4'} onClick={() => setTab('Master data')}>Open master data</button><form onSubmit={publish}><fieldset disabled={busy || loading} className="space-y-5">{chooser}<label className="block text-sm">Review note / rejection reason<textarea maxLength={500} className={field} value={reason} onChange={e => setReason(e.target.value)} /></label><div className="flex flex-wrap gap-3"><button className={primary} disabled={!selectionValid}><Check size={16} />Approve and publish</button><button className={button} type="button" disabled={!reason.trim() || reviewing.status !== 'PENDING'} onClick={() => void action(async () => { await api.adminPost(`/operators/catalog/admin/applications/${reviewing._id}/review`, { revision: reviewing.revision, decision: 'REJECT', reason }); setReviewing(null); }, 'Application rejected with the reason provided.')}>Reject with reason</button><button className={button} type="button" onClick={() => setReviewing(null)}>Cancel review</button></div></fieldset></form></Section>}</>}
     {tab === 'Excel import' && <Section title="Import vehicle specifications from Excel" description="Download the template, enter up to 500 rows and preview before importing. Existing identities are reused; fares are never imported. Imports stop on a conflict and can safely be repeated after correction."><div className="flex flex-wrap gap-3"><button className={button} disabled={busy} onClick={() => void action(async () => { const r = await api.adminGet<{ data: { workbookBase64: string } }>('/operators/catalog/admin/excel-template'); const blob = new Blob([Uint8Array.from(atob(r.data.workbookBase64), c => c.charCodeAt(0))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'lookiy-vehicle-catalog.xlsx'; a.click(); URL.revokeObjectURL(url); }, 'Excel template downloaded.')}><Download size={16} />Download template</button><label className={button + ' cursor-pointer'}><Upload size={16} />Choose .xlsx<input className="sr-only" aria-label="Excel workbook" type="file" accept=".xlsx" disabled={busy} onChange={e => void selectFile(e.target.files?.[0])} /></label></div>{file && <p className="mt-4 text-sm">{file.name}</p>}<div className="mt-4 flex gap-3"><button className={primary} disabled={!file || busy} onClick={() => void action(async () => { const r = await api.adminPost<{ data: NonNullable<typeof preview> }>('/operators/catalog/admin/excel-import', { workbookBase64: file!.base64, commit: false }); setPreview(r.data); }, 'Workbook checked. Review the rows and any errors below.')}><Search size={16} />Preview workbook</button><button className={primary} disabled={!file || !preview || !!preview.errors.length || !preview.rows.length || busy} onClick={() => void action(async () => { const r = await api.adminPost<{ data: NonNullable<typeof preview> }>('/operators/catalog/admin/excel-import', { workbookBase64: file!.base64, commit: true }); setPreview(r.data); if (r.data.errors.length) throw new Error('Catalog changed. Resolve the errors and preview again.'); }, 'Vehicle specifications imported.')}>Import {preview?.rows.length || ''} rows</button></div>{preview && <div className="mt-5 space-y-3"><p className="text-sm">{preview.rows.length} valid rows · {preview.errors.length} errors · {preview.imported} imported</p>{preview.errors.map(e => <p className="text-sm text-red-700" key={e.row}>Row {e.row}: {e.message}</p>)}<div className="max-h-96 overflow-auto rounded-xl border"><table className="w-full text-left text-xs"><thead className="bg-slate-50"><tr>{['Row', 'Type', 'Group', 'Category', 'Brand', 'Model', 'Seats', 'Year'].map(h => <th className="p-3" key={h}>{h}</th>)}</tr></thead><tbody>{preview.rows.map(r => <tr className="border-t" key={r.row}>{['row', 'type', 'vehicleGroup', 'category', 'brand', 'model', 'seats', 'releaseYear'].map(k => <td className="p-3" key={k}>{r[k]}</td>)}</tr>)}</tbody></table></div></div>}</Section>}
+    {deleting && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-5">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="delete-vehicle-title" aria-describedby="delete-vehicle-description"
+        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onKeyDown={event => {
+          if (event.key === 'Escape' && !busy) setDeleting(null);
+          if (event.key === 'Tab') {
+            const controls = event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+          }
+        }}>
+        <h2 id="delete-vehicle-title" className="text-lg font-semibold">Delete {deleting.name}?</h2>
+        <p id="delete-vehicle-description" className="mt-3 text-sm leading-6 text-slate-600">
+          {deleting.resource === 'entries'
+            ? 'This entry and the vehicle choices that depend on it will be removed from the catalog.'
+            : 'This vehicle will be removed from the catalog and new registration and booking choices.'}
+          {' '}Linked rider and journey records will be retained. Riders using a deleted listing must choose another listed vehicle before going online again.
+        </p>
+        {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+        <div className="mt-5 flex justify-end gap-3">
+          <button autoFocus className={button} disabled={busy} onClick={() => setDeleting(null)}>Cancel</button>
+          <button className={button + ' border-red-700 bg-red-700 text-white'} disabled={busy} onClick={() => void confirmDelete()}>
+            <Trash2 size={16} />{busy ? 'Deleting…' : 'Delete vehicle'}
+          </button>
+        </div>
+      </div>
+    </div>}
   </main></>;
 }
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) { return <section className="rounded-2xl border border-[#E2E8EE] bg-white p-5 sm:p-6"><h2 className="mb-2 text-lg font-semibold">{title}</h2>{description && <p className="mb-5 max-w-3xl text-sm leading-6 text-slate-500">{description}</p>}{children}</section>; }
