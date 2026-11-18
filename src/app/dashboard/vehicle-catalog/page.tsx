@@ -13,6 +13,7 @@ type DeleteTarget = { resource: 'entries' | 'specifications'; id: string; revisi
 const EMPTY: Selection = { typeId: '', variantId: '', brandId: '', modelId: '', capacityId: '', yearId: '', premium: false };
 const KINDS = [['BRAND', 'Brands'], ['MODEL', 'Models'], ['RELEASE_YEAR', 'Release years'], ['CAPACITY', 'Seats / capacity'], ['TYPE', 'Vehicle types'], ['TRUCK_CATEGORY', 'Truck categories'], ['BODA_TYPE', 'Boda power types']];
 const names: Record<string, string> = { BRAND: 'Brand name', MODEL: 'Model name', TYPE: 'Vehicle type name', TRUCK_CATEGORY: 'Truck category name', BODA_TYPE: 'Boda power type' };
+const systemTypes = [{ _id: 'SUV', label: 'SUV', group: 'CAR' }, { _id: 'Saloon', label: 'Saloon car', group: 'CAR' }, { _id: 'Van', label: 'Van', group: 'VAN' }, { _id: 'Truck', label: 'Truck', group: 'TRUCK' }, { _id: 'Boda boda', label: 'Boda boda', group: 'BODA' }];
 const field = 'mt-2 min-h-11 w-full rounded-xl border border-[#DCE4EB] bg-white px-3 py-2 text-sm disabled:bg-slate-100';
 const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium disabled:opacity-40';
 const primary = button + ' border-[#18334E] bg-[#18334E] text-white';
@@ -143,10 +144,12 @@ export default function VehicleCatalogPage() {
       <form onSubmit={saveEntry}><fieldset disabled={busy || loading} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {parentKind && !editing && <Select label={kind === 'TYPE' || kind === 'MODEL' ? 'Brand' : kind === 'RELEASE_YEAR' ? 'Model' : kind === 'CAPACITY' ? 'Release year' : 'Vehicle type'} value={parent} options={parents.map(e => ({ ...e, label: entryLabel(e) }))} onChange={setParent} />}
         {(canCreate || editing) && <>
-        {!numeric && (kind === 'BODA_TYPE' && !editing
+        {!numeric && (kind === 'TYPE'
+          ? <Select label="Vehicle type" value={label} disabled={!!editing} options={editing && !systemTypes.some(type => type._id === label) ? [...systemTypes, { _id: label, label, group: editing.vehicleType || 'CAR' }] : systemTypes} onChange={name => { setLabel(name); setVehicleGroup(systemTypes.find(type => type._id === name)?.group || 'CAR'); }} />
+          : kind === 'BODA_TYPE' && !editing
           ? <Select label="Boda power type" value={label} options={[{ _id: 'Electric', label: 'Electric' }, { _id: 'Non-electric', label: 'Non-electric' }]} onChange={setLabel} />
           : <label className="text-sm">{names[kind]}<input className={field} required maxLength={80} value={label} onChange={e => setLabel(e.target.value)} /></label>)}
-        {kind === 'TYPE' && <label className="text-sm">Operational group<select className={field} value={vehicleGroup} disabled={!!editing} onChange={e => setVehicleGroup(e.target.value)}>{['CAR', 'VAN', 'TRUCK', 'BODA'].map(g => <option key={g}>{g}</option>)}</select><span className="text-xs text-slate-500">Use CAR for SUV and saloon types.</span></label>}
+        {kind === 'TYPE' && !editing && <p className="self-center text-sm text-slate-500">Select the type to make available under this brand. Its system group is assigned automatically.</p>}
         {['CAPACITY', 'RELEASE_YEAR'].includes(kind) && <label className="text-sm">{kind === 'CAPACITY' ? 'Seats excluding driver' : 'Release year'}<input type="number" required className={field} disabled={!!editing} min={kind === 'CAPACITY' ? 0 : 1900} max={kind === 'CAPACITY' ? 60 : new Date().getUTCFullYear() + 1} value={value} onChange={e => setValue(e.target.value)} /></label>}
         {kind === 'RELEASE_YEAR' && <label className="text-sm">Release date · optional<input type="date" className={field} disabled={!!editing} value={date} onChange={e => setDate(e.target.value)} /></label>}
         {editing && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />Active</label>}

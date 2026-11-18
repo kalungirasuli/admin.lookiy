@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { CircleDollarSign, Pencil, Plus, RefreshCw } from 'lucide-react';
 import Header from '@/components/layout/Header';
+import PickupRangeSettings from '@/components/dashboard/PickupRangeSettings';
 import { api } from '@/lib/api';
 import { normalizeVehicleOption, vehicleFareSelections, type RegisteredVehicleSpecification } from '@/lib/vehicle-fare-options';
 
@@ -19,7 +20,6 @@ export default function VehicleFaresPage() {
   const [type, setType] = useState('CAR'), [variant, setVariant] = useState('SUV');
   const [brand, setBrand] = useState(''), [model, setModel] = useState(''), [year, setYear] = useState(''), [seats, setSeats] = useState('');
   const [editing, setEditing] = useState<Fare | null>(null);
-  const [pickupThreshold, setPickupThreshold] = useState('');
   const [base, setBase] = useState(''), [perKm, setPerKm] = useState(''), [active, setActive] = useState(true), [search, setSearch] = useState('');
   const [extraPercent, setExtraPercent] = useState(''), [previewPassengers, setPreviewPassengers] = useState('1');
   const [registered, setRegistered] = useState<{ key: string; rows: RegisteredVehicleSpecification[] }>({ key: '', rows: [] });
@@ -54,9 +54,9 @@ export default function VehicleFaresPage() {
   }, [type, variant, optionsKey, editing, catalog, optionsRevision]);
   const existingOptions = registered.key === optionsKey ? registered.rows : [];
   const selections = vehicleFareSelections(existingOptions, brand, model, year);
-  function reset() { setPickupThreshold(''); setEditing(null); setBrand(''); setModel(''); setYear(''); setSeats(type === 'TRUCK' ? '0' : type === 'BODA' ? '1' : ''); setBase(''); setPerKm(''); setExtraPercent(type === 'BODA' ? '0' : ''); setPreviewPassengers('1'); setActive(true); }
+  function reset() { setEditing(null); setBrand(''); setModel(''); setYear(''); setSeats(type === 'TRUCK' ? '0' : type === 'BODA' ? '1' : ''); setBase(''); setPerKm(''); setExtraPercent(type === 'BODA' ? '0' : ''); setPreviewPassengers('1'); setActive(true); }
   function edit(fare: Fare) {
-    setPickupThreshold(fare.premiumPickupThresholdKm == null ? '' : String(fare.premiumPickupThresholdKm)); setEditing(fare); setType(fare.vehicleType); setVariant(fare.vehicleVariant); setBrand(fare.vehicleBrand || ''); setModel(fare.vehicleModel || ''); setYear(fare.vehicleYear ? String(fare.vehicleYear) : ''); setSeats(String(fare.vehicleCapacity)); setExtraPercent(fare.additionalPassengerPercent == null ? '' : String(fare.additionalPassengerPercent)); setPreviewPassengers('1');
+    setEditing(fare); setType(fare.vehicleType); setVariant(fare.vehicleVariant); setBrand(fare.vehicleBrand || ''); setModel(fare.vehicleModel || ''); setYear(fare.vehicleYear ? String(fare.vehicleYear) : ''); setSeats(String(fare.vehicleCapacity)); setExtraPercent(fare.additionalPassengerPercent == null ? '' : String(fare.additionalPassengerPercent)); setPreviewPassengers('1');
     setBase(String(fare.baseFareUGX)); setPerKm(String(fare.perKmUGX)); setActive(fare.active); setError(''); setMessage('');
     editor.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -70,10 +70,9 @@ export default function VehicleFaresPage() {
   async function save(event: FormEvent) {
     event.preventDefault();
     if (loading || saving || !validSpecification || !validAmounts) return;
-    if (pickupThreshold && (!Number.isFinite(Number(pickupThreshold)) || Number(pickupThreshold) < 0.1 || Number(pickupThreshold) > 10)) { setError('Set a Premium pickup distance between 0.1 and 10 km.'); return; }
     setSaving(true); setError(''); setMessage('');
     try {
-      const amounts = { ...(type === 'CAR' && pickupThreshold ? { premiumPickupThresholdKm: Number(pickupThreshold) } : {}), baseFareUGX: Number(base), perKmUGX: Number(perKm), additionalPassengerPercent: Number(extraPercent), active };
+      const amounts = { baseFareUGX: Number(base), perKmUGX: Number(perKm), additionalPassengerPercent: Number(extraPercent), active };
       const response = editing
         ? await api.adminPut<{ data: Fare }>(`/geo/admin/vehicle-fares/${editing._id}`, { ...amounts, revision: editing.revision })
         : await api.adminPost<{ data: Fare }>('/geo/admin/vehicle-fares', { ...amounts, vehicleType: type, vehicleVariant: variant, ...(type !== 'BODA' ? { catalogSpecificationId: existingOptions.find(row => normalizeVehicleOption(row.vehicleBrand) === normalizeVehicleOption(brand) && normalizeVehicleOption(row.vehicleModel) === normalizeVehicleOption(model) && row.vehicleYear === Number(year) && row.vehicleCapacity === Number(seats))?.catalogSpecificationId, vehicleBrand: brand.trim().replace(/\s+/g, ' '), vehicleModel: model.trim().replace(/\s+/g, ' '), vehicleYear: Number(year) } : {}), vehicleCapacity: Number(seats) });
@@ -87,13 +86,14 @@ export default function VehicleFaresPage() {
   const filtered = fares.filter(fare => `${label(fare)} ${description(fare)}`.toLowerCase().includes(search.trim().toLowerCase()));
   return <><Header title="Vehicle fares" subtitle="Manage all vehicle rates and passenger adjustments" />
     <main className="space-y-6 p-5 sm:p-8">
+      <PickupRangeSettings />
       <div className="flex flex-wrap items-center justify-between gap-4"><p className="max-w-2xl text-sm leading-6 text-[#6B7D8C]">Set base fare, kilometre rate and additional-passenger percentage here. Boda rates are shared by both power types, with separate rules for one passenger, two passengers and delivery. No prices are filled in automatically.</p><button disabled={loading || saving} onClick={() => { reset(); void load(); }} className="flex min-h-[44px] items-center gap-2 rounded-xl border bg-white px-4 text-sm disabled:opacity-50"><RefreshCw size={16} />Refresh</button></div>
       {error && <p role="alert" className="rounded-xl border border-[#F0D9D2] bg-[#FFF6F3] p-4 text-sm text-[#A35C52]">{error}</p>}
       {message && <p role="status" className="rounded-xl bg-[#E8F5F0] p-4 text-sm text-[#248066]">{message}</p>}
       <section ref={editor} className="scroll-mt-28 rounded-2xl border border-[#E1E7EC] bg-white p-5 sm:p-6">
         <div className="mb-5 flex items-center gap-2"><CircleDollarSign size={20} className="text-[#D98B2B]" /><h2 className="text-lg font-semibold text-[#102B48]">{editing ? 'Edit vehicle fare' : 'Add vehicle fare'}</h2></div>
         <form onSubmit={save} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          <label className="text-xs font-semibold text-[#506174]">Vehicle type<select aria-label="Vehicle type" className={fieldClass} value={type} disabled={!!editing || loading || saving} onChange={event => { const next = catalog.find(item => item.type === event.target.value)!; setType(next.type); setVariant(next.variants[0].id); setBrand(''); setModel(''); setYear(''); setSeats(next.type === 'TRUCK' ? '0' : next.type === 'BODA' ? '1' : ''); setExtraPercent(next.type === 'BODA' ? '0' : ''); setBase(''); setPerKm(''); setPickupThreshold(''); setPreviewPassengers('1'); }}>
+          <label className="text-xs font-semibold text-[#506174]">Vehicle type<select aria-label="Vehicle type" className={fieldClass} value={type} disabled={!!editing || loading || saving} onChange={event => { const next = catalog.find(item => item.type === event.target.value)!; setType(next.type); setVariant(next.variants[0].id); setBrand(''); setModel(''); setYear(''); setSeats(next.type === 'TRUCK' ? '0' : next.type === 'BODA' ? '1' : ''); setExtraPercent(next.type === 'BODA' ? '0' : ''); setBase(''); setPerKm(''); setPreviewPassengers('1'); }}>
             {catalog.map(item => <option key={item.type} value={item.type}>{item.label}</option>)}
           </select></label>
           <label className="text-xs font-semibold text-[#506174]">Category<select aria-label="Vehicle category" className={fieldClass} value={variant} disabled={!!editing || loading || saving} onChange={event => { setVariant(event.target.value); setBrand(''); setModel(''); setYear(''); setSeats(''); }}>
@@ -108,8 +108,7 @@ export default function VehicleFaresPage() {
           <label className="text-xs font-semibold text-[#506174]">Base fare · UGX<input aria-label="Base fare in UGX" required type="number" min="0" max="10000000" step="1" className={fieldClass} value={base} disabled={saving} onChange={event => setBase(event.target.value)} placeholder="Enter base fare" /></label>
           <label className="text-xs font-semibold text-[#506174]">Per kilometre · UGX<input aria-label="Fare per kilometre in UGX" required type="number" min="1" max="10000000" step="1" className={fieldClass} value={perKm} disabled={saving} onChange={event => setPerKm(event.target.value)} placeholder="Enter kilometre rate" /></label>
           {type !== 'BODA' && <label className="text-xs font-semibold text-[#506174]">Each additional passenger · %<input aria-label="Additional passenger percentage" required type="number" min="0" max="1000" step="1" className={fieldClass} value={extraPercent} disabled={saving} onChange={event => setExtraPercent(event.target.value)} placeholder="Enter percentage; 0 for no surcharge" /><span className="mt-1 block font-normal text-[#718092]">Applied once to both base and distance charges. Delivery has no passenger adjustment.</span></label>}
-          {type !== 'BODA' && Number(seats) > 0 && <label className="text-xs font-semibold text-[#506174]">Preview passengers<input aria-label="Preview passenger count" type="number" min="1" max={Number(seats)} step="1" className={fieldClass} value={previewPassengers} onChange={event => setPreviewPassengers(event.target.value)} /></label>}
-          {type === 'CAR' && <label className="text-xs font-semibold text-[#506174]">Premium pickup distance · km<input aria-label="Premium pickup distance in km" type="number" min="0.1" max="10" step="0.1" className={fieldClass} value={pickupThreshold} disabled={saving} onChange={event => setPickupThreshold(event.target.value)} placeholder="Set distance for Premium cars" /><span className="mt-2 block text-xs font-normal leading-5 text-[#718092]">Required before a Premium car can be booked. Drivers farther than this distance need client approval for a 10% pickup fee. Other cars have no pickup surcharge.</span></label>}
+          {type !== 'BODA' && Number(seats) > 0 && <label className="text-xs font-semibold text-[#506174]">Passengers in example trip<input aria-label="Preview passenger count" type="number" min="1" max={Number(seats)} step="1" className={fieldClass} value={previewPassengers} onChange={event => setPreviewPassengers(event.target.value)} /><span className="mt-1 block font-normal text-[#718092]">Only changes the 5 km example below. Vehicle capacity and saved fare rules stay separate.</span></label>}
           <div className="flex flex-col justify-center gap-3"><label className="flex min-h-[44px] items-center gap-3 text-sm text-[#334D62]"><input type="checkbox" checked={active} disabled={saving} onChange={event => setActive(event.target.checked)} />Active for new estimates</label><p className="text-xs leading-5 text-[#718092]">Fare = (base + kilometres × rate) × passenger adjustment, rounded up once to UGX 500. {previewFare != null ? `A 5 km ${previewCount ? `trip for ${previewCount} passenger(s)` : 'delivery'} would cost ${ugx(previewFare)}.` : ''}</p></div>
           <div className="flex flex-wrap gap-3 md:col-span-2 xl:col-span-3"><button type="submit" disabled={loading || saving || !validSpecification || !validAmounts} className="flex min-h-[44px] items-center gap-2 rounded-xl bg-[#102B48] px-5 text-sm font-semibold text-white disabled:opacity-40"><Plus size={16} />{saving ? 'Saving…' : editing ? 'Save changes' : 'Save fare'}</button>{editing && <button type="button" disabled={saving} onClick={reset} className="min-h-[44px] rounded-xl border px-5 text-sm">Cancel edit</button>}</div>
         </form>
